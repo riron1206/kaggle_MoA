@@ -29,7 +29,8 @@
 -------------------------------------
 
 ### git 更新は以下のコマンドで出来た
+```bash
 $ git add --all
 $ git commit -m "hogehoge"
 $ git push origin HEAD:master
-
+```
