@@ -1,0 +1,260 @@
+Our out of folds mean log loss score is 0.01636484401152223
+Our out of folds mean log loss score is 0.01629490070516472
+Our out of folds mean log loss score is 0.016342399539141562
+Our out of folds mean log loss score is 0.016325195183923644
+Our out of folds mean log loss score is 0.016300494771428104
+Our out of folds mean log loss score is 0.016316916348147737
+Our out of folds mean log loss score is 0.0163115230181217
+Our out of folds mean log loss score is 0.016308580088714456
+WARNING:tensorflow:Callbacks method `on_train_batch_end` is slow compared to the batch time (batch time: 0.0000s vs `on_train_batch_end` time: 0.0156s). Check your callbacks.
+Our out of folds mean log loss score is 0.016295573810712144
+Our out of folds mean log loss score is 0.016289505125882953
+WARNING:tensorflow:Callbacks method `on_train_batch_end` is slow compared to the batch time (batch time: 0.0000s vs `on_train_batch_end` time: 0.0156s). Check your callbacks.
+Our out of folds mean log loss score is 0.016221067328658113
+WARNING:tensorflow:Callbacks method `on_train_batch_end` is slow compared to the batch time (batch time: 0.0000s vs `on_train_batch_end` time: 0.0156s). Check your callbacks.
+Our out of folds mean log loss score is 0.01626875103513603
+Our out of folds mean log loss score is 0.016304104970539163
+Our out of folds mean log loss score is 0.016253126474385753
+Our out of folds mean log loss score is 0.016175010745940563
+Our out of folds mean log loss score is 0.016186298725982044
+Our out of folds mean log loss score is 0.016205423567016788
+WARNING:tensorflow:Callbacks method `on_train_batch_end` is slow compared to the batch time (batch time: 0.0000s vs `on_train_batch_end` time: 0.0158s). Check your callbacks.
+Our out of folds mean log loss score is 0.016180896959390748
+Our out of folds mean log loss score is 0.01619545666370461
+Our out of folds mean log loss score is 0.016149860026435064
+Our out of folds mean log loss score is 0.0162009367865654
+Our out of folds mean log loss score is 0.0163449475934619
+Our out of folds mean log loss score is 0.01630018406051065
+Our out of folds mean log loss score is 0.01628634601303756
+Our out of folds mean log loss score is 0.016314034989623125
+Our out of folds mean log loss score is 0.01632403211698264
+Our out of folds mean log loss score is 0.016316312668362247
+WARNING:tensorflow:Callbacks method `on_train_batch_end` is slow compared to the batch time (batch time: 0.0000s vs `on_train_batch_end` time: 0.0167s). Check your callbacks.
+Our out of folds mean log loss score is 0.0162636378215885
+Our out of folds mean log loss score is 0.016688219175013595
+Our out of folds mean log loss score is 0.016710718837590153
+WARNING:tensorflow:Callbacks method `on_train_batch_end` is slow compared to the batch time (batch time: 0.0000s vs `on_train_batch_end` time: 0.0156s). Check your callbacks.
+Our out of folds mean log loss score is 0.016710588905664535
+Our out of folds mean log loss score is 0.016691734553752748
+Our out of folds mean log loss score is 0.016731570340109945
+Our out of folds mean log loss score is 0.016698327958295362
+Our out of folds mean log loss score is 0.01673970764504742
+Our final out of folds log loss for our classic dnn blend is 0.015976769597503656
+Our final out of folds log loss for our classic dnn + dnn resnet type model is 0.016026142073387813
+Using model 5l with seed 1 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.01636484401152223
+--------------------------------------------------
+
+
+Using model 5l with seed 2 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.01629490070516472
+--------------------------------------------------
+
+
+Using model 5l with seed 3 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016342399539141562
+--------------------------------------------------
+
+
+Using model 5l with seed 4 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016325195183923644
+--------------------------------------------------
+
+
+Using model 5l with seed 5 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016300494771428104
+--------------------------------------------------
+
+
+Using model 5l with seed 6 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016316916348147737
+--------------------------------------------------
+
+
+Using model 5l with seed 7 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.0163115230181217
+--------------------------------------------------
+
+
+Our out of folds log loss for our seed blend model is 0.01609463507516207
+Using model 4l with seed 8 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016308580088714456
+--------------------------------------------------
+
+
+Using model 4l with seed 9 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016295573810712144
+--------------------------------------------------
+
+
+Using model 4l with seed 10 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016289505125882953
+--------------------------------------------------
+
+
+Using model 4l with seed 11 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016221067328658113
+--------------------------------------------------
+
+
+Using model 4l with seed 12 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.01626875103513603
+--------------------------------------------------
+
+
+Using model 4l with seed 13 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016304104970539163
+--------------------------------------------------
+
+
+Using model 4l with seed 14 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016253126474385753
+--------------------------------------------------
+
+
+Our out of folds log loss for our seed blend model is 0.0160450083055203
+Using model 3l with seed 15 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016175010745940563
+--------------------------------------------------
+
+
+Using model 3l with seed 16 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016186298725982044
+--------------------------------------------------
+
+
+Using model 3l with seed 17 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016205423567016788
+--------------------------------------------------
+
+
+Using model 3l with seed 18 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016180896959390748
+--------------------------------------------------
+
+
+Using model 3l with seed 19 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.01619545666370461
+--------------------------------------------------
+
+
+Using model 3l with seed 20 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016149860026435064
+--------------------------------------------------
+
+
+Using model 3l with seed 21 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.0162009367865654
+--------------------------------------------------
+
+
+Our out of folds log loss for our seed blend model is 0.01587327808513206
+Using model 2l with seed 22 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.0163449475934619
+--------------------------------------------------
+
+
+Using model 2l with seed 23 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.01630018406051065
+--------------------------------------------------
+
+
+Using model 2l with seed 24 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.01628634601303756
+--------------------------------------------------
+
+
+Using model 2l with seed 25 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016314034989623125
+--------------------------------------------------
+
+
+Using model 2l with seed 26 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.01632403211698264
+--------------------------------------------------
+
+
+Using model 2l with seed 27 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016316312668362247
+--------------------------------------------------
+
+
+Using model 2l with seed 28 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.0162636378215885
+--------------------------------------------------
+
+
+Our out of folds log loss for our seed blend model is 0.016135173302326968
+Using model rs with seed 29 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016688219175013595
+--------------------------------------------------
+
+
+Using model rs with seed 30 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016710718837590153
+--------------------------------------------------
+
+
+Using model rs with seed 31 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016710588905664535
+--------------------------------------------------
+
+
+Using model rs with seed 32 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016691734553752748
+--------------------------------------------------
+
+
+Using model rs with seed 33 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016731570340109945
+--------------------------------------------------
+
+
+Using model rs with seed 34 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.016698327958295362
+--------------------------------------------------
+
+
+Using model rs with seed 35 for inference
+Trained with 1069 features
+Our out of folds mean log loss score is 0.01673970764504742
+--------------------------------------------------
+
+
+Our out of folds log loss for our seed blend model is 0.015911840123799145
+Our final out of folds log loss for our classic dnn blend is 0.015917383174071216
+Our final out of folds log loss for our classic dnn + dnn resnet type model is 0.015825566204572077

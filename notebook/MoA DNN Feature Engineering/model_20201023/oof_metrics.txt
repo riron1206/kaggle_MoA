@@ -1,0 +1,42 @@
+### start run_train: 2020-10-23 10:28:07.990530 ###
+
+5l_seed:1: Our out of folds mean log loss score is 0.01636484401152223
+5l_seed:2: Our out of folds mean log loss score is 0.01629490070516472
+5l_seed:3: Our out of folds mean log loss score is 0.016342399539141562
+5l_seed:4: Our out of folds mean log loss score is 0.016325195183923644
+5l_seed:5: Our out of folds mean log loss score is 0.016300494771428104
+5l_seed:6: Our out of folds mean log loss score is 0.016316916348147737
+5l_seed:7: Our out of folds mean log loss score is 0.0163115230181217
+4l_seed:8: Our out of folds mean log loss score is 0.016308580088714456
+4l_seed:9: Our out of folds mean log loss score is 0.016295573810712144
+4l_seed:10: Our out of folds mean log loss score is 0.016289505125882953
+4l_seed:11: Our out of folds mean log loss score is 0.016221067328658113
+4l_seed:12: Our out of folds mean log loss score is 0.01626875103513603
+4l_seed:13: Our out of folds mean log loss score is 0.016304104970539163
+4l_seed:14: Our out of folds mean log loss score is 0.016253126474385753
+3l_seed:15: Our out of folds mean log loss score is 0.016175010745940563
+3l_seed:16: Our out of folds mean log loss score is 0.016186298725982044
+3l_seed:17: Our out of folds mean log loss score is 0.016205423567016788
+3l_seed:18: Our out of folds mean log loss score is 0.016180896959390748
+3l_seed:19: Our out of folds mean log loss score is 0.01619545666370461
+3l_seed:20: Our out of folds mean log loss score is 0.016149860026435064
+3l_seed:21: Our out of folds mean log loss score is 0.0162009367865654
+2l_seed:22: Our out of folds mean log loss score is 0.0163449475934619
+2l_seed:23: Our out of folds mean log loss score is 0.01630018406051065
+2l_seed:24: Our out of folds mean log loss score is 0.01628634601303756
+2l_seed:25: Our out of folds mean log loss score is 0.016314034989623125
+2l_seed:26: Our out of folds mean log loss score is 0.01632403211698264
+2l_seed:27: Our out of folds mean log loss score is 0.016316312668362247
+2l_seed:28: Our out of folds mean log loss score is 0.0162636378215885
+rs_seed:29: Our out of folds mean log loss score is 0.016688219175013595
+rs_seed:30: Our out of folds mean log loss score is 0.016710718837590153
+rs_seed:31: Our out of folds mean log loss score is 0.016710588905664535
+rs_seed:32: Our out of folds mean log loss score is 0.016691734553752748
+rs_seed:33: Our out of folds mean log loss score is 0.016731570340109945
+rs_seed:34: Our out of folds mean log loss score is 0.016698327958295362
+rs_seed:35: Our out of folds mean log loss score is 0.01673970764504742
+Our final out of folds log loss for our classic dnn blend is 0.015976769597503656
+Our final out of folds log loss for our classic dnn + dnn resnet type model is 0.016026142073387813
+### end run_train: 2020-10-23 15:47:54.772605 ###
+
+### end run_submission: 2020-10-23 15:55:45.924051 ###
