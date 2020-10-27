@@ -1,9 +1,18 @@
 """
-構造変えた複数のMLPアンサンブル + 統計量の特徴量追加 + pcaで圧縮した特徴量追加 + 特徴選択 + 予測値をクリップ + label-smoothingしたコード
-参考: https://www.kaggle.com/ragnar123/moa-dnn-feature-engineering
+メソッド集
+構造変えた複数のMLPアンサンブル + 統計量の特徴量追加 + pcaで圧縮した特徴量追加 + 特徴選択 + 予測値をクリップ + label-smoothingしたコード など
+参考:
+- https://www.kaggle.com/ragnar123/moa-dnn-feature-engineering
 """
+
 import datetime
+import logging
+import os
+import pathlib
 import sys
+import traceback
+import random
+import warnings
 
 # sys.path.append('../input/iterative-stratification/iterative-stratification-master')
 sys.path.append(r"C:\Users\81908\Git\iterative-stratification")
@@ -14,12 +23,9 @@ import pandas as pd
 import tensorflow as tf
 import tensorflow.keras.backend as K
 import tensorflow_addons as tfa
-from sklearn.metrics import log_loss
-import random
-import os
+from sklearn.metrics import log_loss, f1_score
 from sklearn.preprocessing import RobustScaler
 from sklearn.decomposition import PCA
-import warnings
 from tqdm import tqdm
 
 # Adamを改良したAdaBelief https://github.com/juntang-zhuang/Adabelief-Optimizer
@@ -43,6 +49,11 @@ SEEDS2 = [8]
 SEEDS3 = [15]
 SEEDS4 = [22]
 SEEDS5 = [29]
+# SEEDS1 = [1, 2, 3, 4, 5, 6, 7]
+# SEEDS2 = [8, 9, 10, 11, 12, 13, 14]
+# SEEDS3 = [15, 16, 17, 18, 19, 20, 21]
+# SEEDS4 = [22, 23, 24, 25, 26, 27, 28]
+# SEEDS5 = [29, 30, 31, 32, 33, 34, 35]
 
 # Got this predictors from public kernels for the resnet type model
 # 特徴量選択しておくみたい public kerelでやってるのパクリらしい
@@ -497,6 +508,63 @@ start_predictors = [
 ]
 
 
+class Logger:
+    def __init__(self, output_dir=None):
+        self.general_logger = logging.getLogger("general")
+        self.result_logger = logging.getLogger("result")
+        stream_handler = logging.StreamHandler()
+
+        # ディレクトリ指定無ければカレントディレクトリにログファイル出す
+        output_dir = pathlib.Path.cwd() if output_dir is None else output_dir
+        file_general_handler = logging.FileHandler(
+            os.path.join(output_dir, "general.log")
+        )
+        file_result_handler = logging.FileHandler(
+            os.path.join(output_dir, "result.log")
+        )
+
+        if len(self.general_logger.handlers) == 0:
+            self.general_logger.addHandler(stream_handler)
+            self.general_logger.addHandler(file_general_handler)
+            self.general_logger.setLevel(logging.INFO)
+            self.result_logger.addHandler(stream_handler)
+            self.result_logger.addHandler(file_result_handler)
+            self.result_logger.setLevel(logging.INFO)
+
+    def info(self, message):
+        """時刻をつけてコンソールとgeneral.log（ログファイル）に文字列書き込み"""
+        self.general_logger.info("[{}] - {}".format(self.now_string(), message))
+
+    def result_scores(self, run_name, scores):
+        """
+        計算結果をコンソールとresult.log（cv結果用ログファイル）に書き込み
+        parms: run_name: 実行したcvの名前
+        parms: scores: cv scoreのリスト。result.logには平均値も書く
+        """
+        dic = dict()
+        dic["name"] = run_name
+        dic["score"] = np.mean(scores)
+        for i, score in enumerate(scores):
+            dic[f"score{i}"] = score
+        self.result(self.to_ltsv(dic))
+
+    def result(self, message):
+        """コンソールとresult.logに文字列書き込み"""
+        self.result_logger.info(message)
+
+    def result_ltsv(self, dic):
+        """コンソールとresult.logに辞書データ書き込み"""
+        self.result(self.to_ltsv(dic))
+
+    def now_string(self):
+        """時刻返すだけ"""
+        return str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+    def to_ltsv(self, dic):
+        """辞書を文字列に変えるだけ"""
+        return "\t".join(["{}:{}".format(key, value) for key, value in dic.items()])
+
+
 def load_orig_data():
     # train = pd.read_csv("../input/lish-moa/train_features.csv")
     # train_targets = pd.read_csv("../input/lish-moa/train_targets_scored.csv")
@@ -597,7 +665,7 @@ def fe_stats(train, test, params=["g", "c", "gc"], flag_add=True):
             if flag_add:
                 df["g_quan25"] = df[features_g].quantile(0.25, axis=1)
                 df["g_quan75"] = df[features_g].quantile(0.75, axis=1)
-                df["g_quan_ratio"] = df["g_quan75"] / df["g_quan25"]
+                # df["g_quan_ratio"] = df["g_quan75"] / df["g_quan25"]
                 df["g_ptp"] = np.abs(df[features_g].max(axis=1)) - np.abs(
                     df[features_g].min(axis=1)
                 )
@@ -610,7 +678,7 @@ def fe_stats(train, test, params=["g", "c", "gc"], flag_add=True):
             if flag_add:
                 df["c_quan25"] = df[features_c].quantile(0.25, axis=1)
                 df["c_quan75"] = df[features_c].quantile(0.75, axis=1)
-                df["c_quan_ratio"] = df["c_quan75"] / df["c_quan25"]
+                # df["c_quan_ratio"] = df["c_quan75"] / df["c_quan25"]
                 df["c_ptp"] = np.abs(df[features_c].max(axis=1)) - np.abs(
                     df[features_c].min(axis=1)
                 )
@@ -623,7 +691,7 @@ def fe_stats(train, test, params=["g", "c", "gc"], flag_add=True):
             if flag_add:
                 df["gc_quan25"] = df[features_g + features_c].quantile(0.25, axis=1)
                 df["gc_quan75"] = df[features_g + features_c].quantile(0.75, axis=1)
-                df["gc_quan_ratio"] = df["gc_quan75"] / df["gc_quan25"]
+                # df["gc_quan_ratio"] = df["gc_quan75"] / df["gc_quan25"]
                 df["gc_ptp"] = np.abs(df[features_g + features_c].max(axis=1)) - np.abs(
                     df[features_g + features_c].min(axis=1)
                 )
@@ -652,7 +720,6 @@ def c_squared(train, test):
 # Function to calculate the mean log loss of the targets including clipping
 def mean_log_loss(y_true, y_pred):
     """マルチラベル全体でlog lossを平均する"""
-
     # 評価指標がlog losだからか？+label smoothingするため、予測ラベルはクリッピングする
     y_pred = np.clip(y_pred, 1e-15, 1 - 1e-15)
     metrics = []
@@ -912,6 +979,11 @@ def train_and_evaluate(
         )
         y_train, y_val = train_targets.values[trn_ind], train_targets.values[val_ind]
 
+        # ValueError: Failed to convert a NumPy array to a Tensor (Unsupported object type int). 回避
+        x_train = np.asarray(x_train).astype("float32")
+        x_val = np.asarray(x_val).astype("float32")
+        test[features] = np.asarray(test[features]).astype("float32")
+
         if MODEL == "rs":
             # 入力2つのNN使うから工夫してる
             x_train_, x_val_ = (
@@ -1040,7 +1112,7 @@ def run_multiple_seeds(
     oof_pred = []
 
     for SEED in SEEDS:
-        print(f"Using model {MODEL} with seed {SEED} for inference")
+        print(f"\nUsing model {MODEL} with seed {SEED} for inference")
         print(f"Trained with {len(features)} features")
         test_pred_, oof_pred_ = inference(
             train,
@@ -1066,12 +1138,12 @@ def run_multiple_seeds(
     return test_pred, oof_pred
 
 
-def submission(test_pred):
-    _, train_targets, test, sample_submission = load_orig_data()
-
+def submission(
+    test_pred, test, sample_submission, train_targets, out_csv="submission.csv"
+):
     sample_submission.loc[:, train_targets.columns] = test_pred
     sample_submission.loc[test["cp_type"] == 1, train_targets.columns] = 0
-    sample_submission.to_csv("submission.csv", index=False)
+    sample_submission.to_csv(out_csv, index=False)
     return sample_submission
 
 
@@ -1164,7 +1236,9 @@ def run_train(model_dir="model"):
         f.write(f"{str_loss1}\n{str_loss2}\n")
 
 
-def run_submission(model_dir="../input"):
+def run_submission(
+    train, test, train_targets, features, sample_submission, model_dir="../input"
+):
     """モデル推論してsubmissioファイル作成"""
     # Inference time
     test_pred_5l, oof_pred_5l = run_multiple_seeds(
@@ -1236,8 +1310,98 @@ def run_submission(model_dir="../input"):
     )
     test_pred = np.average([test_pred, test_pred_rs], axis=0)
 
-    sample_submission = submission(test_pred)
+    sample_submission = submission(test_pred, test, sample_submission, train_targets)
     # sample_submission.head()
+
+    # ------- Nelder-Mead で最適なブレンディングの重み見つける -------
+    oof_preds = [oof_pred_5l, oof_pred_4l, oof_pred_3l, oof_pred_2l, oof_pred_rs]
+    best_weights = nelder_mead_weights(train_targets.values, oof_preds)
+    oof_pred_weights = (
+        best_weights[0] * oof_pred_5l
+        + best_weights[1] * oof_pred_4l
+        + best_weights[2] * oof_pred_3l
+        + best_weights[3] * oof_pred_2l
+        + best_weights[4] * oof_pred_rs
+    )
+    seed_log_loss = mean_log_loss(train_targets.values, oof_pred_weights)
+    print(f"Nelder-Mead dnn blend is {seed_log_loss}")
+    test_pred = (
+        best_weights[0] * test_pred_5l
+        + best_weights[1] * test_pred_4l
+        + best_weights[2] * test_pred_3l
+        + best_weights[3] * test_pred_2l
+        + best_weights[4] * test_pred_rs
+    )
+    sample_submission = submission(test_pred, out_csv="submission_Nelder-Mead.csv")
+    # ----------------------------------------------------------------
+
+
+def nelder_mead_weights(y_true: np.ndarray, oof_preds: list):
+    """ネルダーミードでモデルのブレンド重み最適化"""
+    from scipy.optimize import minimize
+
+    def opt(ws, y_true, y_preds):
+        y_pred = None
+        for w, y_p in zip(ws, y_preds):
+            if y_pred is None:
+                y_pred = w * y_p
+            else:
+                y_pred += w * y_p
+
+        return mean_log_loss(y_true, y_pred)
+
+    initial_weights = np.array([1.0 / len(oof_preds)] * len(oof_preds))
+    result = minimize(
+        opt, x0=initial_weights, args=(y_true, oof_preds), method="Nelder-Mead"
+    )
+    best_weights = result.x
+    return best_weights
+
+
+def run_train_1model(
+    train,
+    test,
+    train_targets,
+    features,
+    logger=Logger("./"),
+    model_dir="model",
+    model_type="3l",
+    seeds=[5],
+    start_predictors=start_predictors,
+):
+    """1モデルだけ作成"""
+    os.makedirs(f"{model_dir}/moa-{model_type}", exist_ok=True)
+    try:
+        # train time
+        oof_pred = None
+        for _seed in seeds:
+            _test_pred, _oof_pred = train_and_evaluate(
+                train,
+                test,
+                train_targets,
+                features,
+                start_predictors,
+                SEED=_seed,
+                MODEL=model_type,
+                PATH=f"{model_dir}/moa-{model_type}",
+            )
+            if oof_pred is None:
+                oof_pred = _oof_pred
+            else:
+                oof_pred += _oof_pred
+        seed_log_loss = mean_log_loss(train_targets.values, oof_pred / len(seeds))
+
+        # oofのlossの値残しておく
+        seed_log_loss = round(seed_log_loss, 7)
+        logger.result(
+            f"model_type:{model_type}, seed:{str(seeds)}, oof:{str(seed_log_loss)}"
+        )  # result.logに文字列書き込み
+
+        return seed_log_loss
+    except Exception as e:
+        traceback.print_exc()
+        # logger.result(f"Exception: {str(e)}")  # result.logに文字列書き込み
+        return 0.0
 
 
 if __name__ == "__main__":
