@@ -7,3 +7,4 @@ poetry_tfgpu1_01_MoA_compe.lnk
 conda_pytorch_01_MoA_compe.lnk
 github_pull.bat
 github_push.bat
+git_push_kaggle_MoA.bat.lnk

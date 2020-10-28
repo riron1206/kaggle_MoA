@@ -1,0 +1,29 @@
+20201023時点
+◆来週試したいこと
+・LightGBMのコード修正（マルチラベルのone modelではなくクラスごとに206個モデル作る方法）
+　→
+・notebook, discussion確認して気になったの試す
+    - https://www.kaggle.com/c/lish-moa/discussion/191545 で書いてるようにデータ不均衡の対策をしたい
+　→
+・TGAN(テーブルデータのGAN)で学習データ水増し（noiseが増えるだけで失敗しそうだが）
+　→1epoch3000時間もかかるといわれたためあきらめる
+　　改良版のCTGANもうまくいかないらしいので
+　　https://www.kaggle.com/c/lish-moa/discussion/193358
+・加重平均のモデルブレンディングの重みをネルダーミードで最適化
+　→ネルダーミードした方がoof下がるが、LBは悪くなった
+
+20201028
+・PCAが有効だと言ってるディスカッション探す
+　→
+　→
+　　https://www.kaggle.com/c/lish-moa/discussion/193532
+
+・LightGBMを1モデルでマルチラベル学習。他のsklearnのモデルでも試せるようにする
+
+・
+
+
+train setだけPCAしたらshakeup する可能性ある
+
+https://www.kaggle.com/c/lish-moa/discussion/193532
+
