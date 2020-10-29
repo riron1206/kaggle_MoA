@@ -432,9 +432,14 @@ if __name__ == "__main__":
     if MODE == "train":
         main_train()
     else:
+        if IS_CHAIN:
+            study_name = "study_chain"
+        else:
+            study_name = "study_multi"
+
         study = optuna.create_study(
-            study_name="study",
-            storage=f"sqlite:///{OUTDIR}/study.db",
+            study_name=study_name,
+            storage=f"sqlite:///{OUTDIR}/{study_name}.db",
             load_if_exists=True,
         )
         study.optimize(objective, n_trials=N_TRIALS)
