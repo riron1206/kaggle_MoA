@@ -33,7 +33,7 @@ from tqdm import tqdm
 
 warnings.filterwarnings("ignore")
 
-FOLDS = 5  # cvの数
+FOLDS = 5  # cvの数 5で固定
 # Number of epochs to train each model
 EPOCHS = 30
 # Batch size
@@ -582,7 +582,7 @@ def load_orig_data():
 
 
 # Function to seed everything
-def seed_everything(seed):
+def seed_everything(seed=123):
     """乱数固定"""
     random.seed(seed)
     np.random.seed(seed)
@@ -598,14 +598,18 @@ def mapping_and_filter(train, train_targets, test):
     for df in [train, test]:
         df["cp_type"] = df["cp_type"].map(cp_type)
         df["cp_dose"] = df["cp_dose"].map(cp_dose)
+
+    # 完全なoofにするためデータ抜くのやめる 20201028
     # ctl_vehicleは必ず0なので学習データから除く
-    train_targets = train_targets[train["cp_type"] == 0].reset_index(drop=True)
-    train = train[train["cp_type"] == 0].reset_index(drop=True)
+    # train_targets = train_targets[train["cp_type"] == 0].reset_index(drop=True)
+    # train = train[train["cp_type"] == 0].reset_index(drop=True)
+
     # sig_id列はidなので不要
     train_targets.drop(["sig_id"], inplace=True, axis=1)
     return train, train_targets, test
 
 
+# --------------------------------------- Feature-Engineering ---------------------------------------
 # Function to scale our data
 def scaling(train, test, scaler=RobustScaler()):
     """規格化。pcaの後に実行してる。pcaの後だから外れ値にロバストな規格化使ってるみたい"""
@@ -645,11 +649,13 @@ def fe_pca(train, test, n_components_g=70, n_components_c=10, SEED=123):
     train, test = create_pca(
         train, test, features_c, kind="c", n_components=n_components_c
     )
-    return train, test
+
+    features = train.columns[2:]
+    return train, test, features
 
 
 # Function to extract common stats features
-def fe_stats(train, test, params=["g", "c", "gc"], flag_add=True):
+def fe_stats(train, test, params=["g", "c", "gc"], flag_add=False):
     """統計量の特徴量追加"""
 
     features_g = list(train.columns[4:776])
@@ -696,25 +702,175 @@ def fe_stats(train, test, params=["g", "c", "gc"], flag_add=True):
                     df[features_g + features_c].min(axis=1)
                 )
 
+    features = train.columns[2:]
+    return train, test, features
+
+
+def fe_quantile_transformer(train, test):
+    """QuantileTransformerで特徴量の分布を一様にする(RankGauss)"""
+    # https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.QuantileTransformer.html
+    # この変換は最も頻繁な値を分散させる傾向があります。また、（わずかな）外れ値の影響も軽減します。したがって、これは堅牢な前処理スキーム
+    from sklearn.preprocessing import QuantileTransformer
+
+    features_g = list(train.columns[4:776])
+    features_c = list(train.columns[776:876])
+
+    for col in features_g + features_c:
+
+        transformer = QuantileTransformer(
+            n_quantiles=100, random_state=0, output_distribution="normal"
+        )
+        vec_len = len(train[col].values)
+        vec_len_test = len(test[col].values)
+        raw_vec = train[col].values.reshape(vec_len, 1)
+        transformer.fit(raw_vec)
+
+        train[col] = transformer.transform(raw_vec).reshape(1, vec_len)[0]
+        test[col] = transformer.transform(
+            test[col].values.reshape(vec_len_test, 1)
+        ).reshape(1, vec_len_test)[0]
+
     return train, test
 
 
+def fe_variance_threshold(train, test, threshold=0.8):
+    """分散で低い特徴量削除"""
+    # https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.VarianceThreshold.html?highlight=variancethreshold#sklearn.feature_selection.VarianceThreshold
+    # トレーニングセットの分散がこのしきい値よりも低い特徴は削除
+    from sklearn.feature_selection import VarianceThreshold
+
+    var_thresh = VarianceThreshold(threshold)
+    data = train.append(test)
+    data_transformed = var_thresh.fit_transform(data.iloc[:, 4:])
+
+    train_transformed = data_transformed[: train.shape[0]]
+    test_transformed = data_transformed[-test.shape[0] :]
+
+    train = pd.DataFrame(
+        train[["sig_id", "cp_type", "cp_time", "cp_dose"]].values.reshape(-1, 4),
+        columns=["sig_id", "cp_type", "cp_time", "cp_dose"],
+    )
+    train = pd.concat([train, pd.DataFrame(train_transformed)], axis=1)
+    test = pd.DataFrame(
+        test[["sig_id", "cp_type", "cp_time", "cp_dose"]].values.reshape(-1, 4),
+        columns=["sig_id", "cp_type", "cp_time", "cp_dose"],
+    )
+    test = pd.concat([test, pd.DataFrame(test_transformed)], axis=1)
+
+    features = train.columns[2:]
+    return train, test, features
+
+
+def fe_cluster(train, test, n_clusters_g=35, n_clusters_c=5, SEED=123):
+    """KMeansで特徴量作成"""
+    from sklearn.cluster import KMeans
+
+    features_g = list(train.columns[4:776])
+    features_c = list(train.columns[776:876])
+
+    def create_cluster(train, test, features, kind="g", n_clusters=n_clusters_g):
+        train_ = train[features].copy()
+        test_ = test[features].copy()
+        data = pd.concat([train_, test_], axis=0)
+        kmeans = KMeans(n_clusters=n_clusters, random_state=SEED).fit(data)
+        train[f"clusters_{kind}"] = kmeans.labels_[: train.shape[0]]
+        test[f"clusters_{kind}"] = kmeans.labels_[train.shape[0] :]
+        train = pd.get_dummies(train, columns=[f"clusters_{kind}"])
+        test = pd.get_dummies(test, columns=[f"clusters_{kind}"])
+        return train, test
+
+    train, test = create_cluster(
+        train, test, features_g, kind="g", n_clusters=n_clusters_g
+    )
+    train, test = create_cluster(
+        train, test, features_c, kind="c", n_clusters=n_clusters_c
+    )
+
+    features = train.columns[2:]
+    return train, test, features
+
+
 def g_squared(train, test):
-    """gの特徴量について2乗した特徴量作成"""
+    """gの特徴量を2乗した特徴量作成"""
     features_g = list(train.columns[4:776])
     for df in [train, test]:
         for feature in features_g:
             df[f"{feature}_squared"] = df[feature] ** 2
-    return train, test
+    features = train.columns[2:]
+    return train, test, features
+
+
+def g_binary(train, test):
+    """gを正負で2値化した特徴量作成"""
+    features_g = list(train.columns[4:776])
+    for df in [train, test]:
+        for feature in features_g:
+            df[f"{feature}_binary"] = df[feature].map(lambda x: 1.0 if x > 0.0 else 0.0)
+    features = train.columns[2:]
+    return train, test, features
 
 
 def c_squared(train, test):
-    """cの特徴量について2乗した特徴量作成"""
+    """cの特徴量を2乗した特徴量作成"""
     features_c = list(train.columns[776:876])
     for df in [train, test]:
         for feature in features_c:
             df[f"{feature}_squared"] = df[feature] ** 2
-    return train, test
+    features = train.columns[2:]
+    return train, test, features
+
+
+def c_abs(train, test):
+    """cの特徴量を絶対値とった特徴量作成"""
+    features_c = list(train.columns[776:876])
+    for df in [train, test]:
+        for feature in features_c:
+            df[f"{feature}_abs"] = np.abs(df[feature])
+    features = train.columns[2:]
+    return train, test, features
+
+
+def drop_col(train, test, col="cp_type"):
+    """特徴量1列削除"""
+    train = train.drop(col, axis=1)
+    test = test.drop(col, axis=1)
+    features = train.columns[2:]
+    return train, test, features
+
+
+def fe_ctl_mean(train, test):
+    """cp_type=ctl_vehicle のコントロールのレコードの平均との差、比率の特徴量追加"""
+    features_g = list(train.columns[4:776])
+    features_c = list(train.columns[776:876])
+    features_gc = features_g + features_c
+    df = pd.concat([train, test], axis=0)
+
+    # コントロールのレコードの条件ごとに平均出す
+    dict_ctl = {}
+    for dose in [0, 1]:
+        for time in [24, 48, 72]:
+            df_ctl = df[
+                (df["cp_type"] == 1) & (df["cp_time"] == time) & (df["cp_dose"] == dose)
+            ]
+            ctl_mean = df_ctl[features_gc].apply(lambda x: np.mean(x), axis=0)
+            dict_ctl[f"ctl_mean_{dose}_{time}"] = ctl_mean
+            # ctl_median = df_ctl[features_gc].apply(lambda x: np.median(x), axis=0)
+            # dict_ctl[f"ctl_median_{dose}_{time}"] = ctl_median
+
+    # 平均との差、比
+    for k, v in dict_ctl.items():
+        for fe, me in tqdm(zip(features_gc, v)):
+            # df[f"{fe}_diff_{k}"] = df[fe] - me
+            df[f"{fe}_ratio_{k}"] = df[fe] / me
+
+    train_ = df.iloc[: train.shape[0]]
+    test_ = df.iloc[train.shape[0] :].reset_index(drop=True)
+    features = train_.columns[2:]
+
+    return train_, test_, features
+
+
+# ---------------------------------------------------------------------------------------------------
 
 
 # Function to calculate the mean log loss of the targets including clipping
@@ -726,6 +882,42 @@ def mean_log_loss(y_true, y_pred):
     for target in range(206):
         metrics.append(log_loss(y_true[:, target], y_pred[:, target]))
     return np.mean(metrics)
+
+
+def create_model_3lWN(shape):
+    """WeightNormalization使った3層のNN"""
+    inp = tf.keras.layers.Input(shape=(shape))
+
+    x = tf.keras.layers.BatchNormalization()(inp)
+    x = tfa.layers.WeightNormalization(tf.keras.layers.Dense(2048, activation="relu"))(
+        x
+    )
+
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tfa.layers.WeightNormalization(tf.keras.layers.Dense(2048, activation="relu"))(
+        x
+    )
+
+    x = tf.keras.layers.BatchNormalization()(x)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    x = tfa.layers.WeightNormalization(tf.keras.layers.Dense(2048, activation="relu"))(
+        x
+    )
+
+    out = tf.keras.layers.Dense(206, activation="sigmoid")(x)
+    model = tf.keras.models.Model(inputs=inp, outputs=out)
+    opt = tf.optimizers.Adam(learning_rate=LR, decay=1e-5)
+    opt = tfa.optimizers.SWA(
+        opt
+    )  # Stochastic Weight Averaging.モデルの重みを、これまで＋今回の平均を取って更新していくことでうまくいくみたい https://twitter.com/icoxfog417/status/989762534163992577
+    model.compile(
+        optimizer=opt,
+        loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.001),  # ラベルスムージング
+        metrics=tf.keras.metrics.BinaryCrossentropy(),
+    )
+    # model.save("model/3lWN_shape.h5")
+    return model
 
 
 def create_model_rs(shape1, shape2):
@@ -814,7 +1006,7 @@ def create_model_5l(shape):
 
 
 # Function to create our 4 layer dnn model
-def create_model_4l(shape, opt=tf.optimizers.Adam(learning_rate=LR)):
+def create_model_4l(shape):
     """入力1つの4層NN。シンプル"""
     inp = tf.keras.layers.Input(shape=(shape))
     x = tf.keras.layers.BatchNormalization()(inp)
@@ -917,37 +1109,51 @@ def train_and_evaluate(
     train_targets,
     features,
     start_predictors,
-    SEED=123,
+    # SEED=123,
     MODEL="3l",
     PATH="../model/moa-3layer",
     OOF_TXT="tmp.txt",
-    opt=tf.optimizers.Adam(learning_rate=LR),
 ):
     """モデル作成"""
     print(f"fold:{FOLDS}, epochs:{EPOCHS}")
     os.makedirs(PATH, exist_ok=True)
-    seed_everything(SEED)
+
+    # seed_everything(SEED)
+    seed_everything()
+
     oof_pred = np.zeros((train.shape[0], 206))
     test_pred = np.zeros((test.shape[0], 206))
+
+    # for fold, (trn_ind, val_ind) in tqdm(
+    #    enumerate(
+    #        MultilabelStratifiedKFold(
+    #            n_splits=FOLDS, random_state=SEED, shuffle=True
+    #        ).split(train_targets, train_targets)
+    #    )
+    # ):
+    # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
     for fold, (trn_ind, val_ind) in tqdm(
         enumerate(
-            MultilabelStratifiedKFold(
-                n_splits=FOLDS, random_state=SEED, shuffle=True
-            ).split(train_targets, train_targets)
+            MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False).split(
+                train_targets, train_targets
+            )
         )
     ):
-        model_path = f"{PATH}/{MODEL}_{fold}_{SEED}.h5"
+        # model_path = f"{PATH}/{MODEL}_{fold}_{SEED}.h5"
+        model_path = f"{PATH}/{MODEL}_{fold}.h5"
         K.clear_session()
         if MODEL == "5l":
             model = create_model_5l(len(features))
         elif MODEL == "4l":
-            model = create_model_4l(len(features), opt=opt)
+            model = create_model_4l(len(features))
         elif MODEL == "3l":
             model = create_model_3l(len(features))
         elif MODEL == "2l":
             model = create_model_2l(len(features))
         elif MODEL == "rs":
             model = create_model_rs(len(features), len(start_predictors))
+        elif MODEL == "3lWN":
+            model = create_model_3lWN(len(features))
 
         early_stopping = tf.keras.callbacks.EarlyStopping(
             monitor="val_binary_crossentropy",
@@ -982,7 +1188,7 @@ def train_and_evaluate(
         # ValueError: Failed to convert a NumPy array to a Tensor (Unsupported object type int). 回避
         x_train = np.asarray(x_train).astype("float32")
         x_val = np.asarray(x_val).astype("float32")
-        test[features] = np.asarray(test[features]).astype("float32")
+        test[features] = test[features].astype("float32")
 
         if MODEL == "rs":
             # 入力2つのNN使うから工夫してる
@@ -1043,18 +1249,29 @@ def inference(
     train_targets,
     features,
     start_predictors,
-    SEED=123,
+    # SEED=123,
     MODEL="3l",
     PATH="../input/moa-3layer",
 ):
     """推論用"""
-    seed_everything(SEED)
+    # seed_everything(SEED)
+    seed_everything()
+
     oof_pred = np.zeros((train.shape[0], 206))
     test_pred = np.zeros((test.shape[0], 206))
-    for fold, (trn_ind, val_ind) in enumerate(
-        MultilabelStratifiedKFold(
-            n_splits=FOLDS, random_state=SEED, shuffle=True
-        ).split(train_targets, train_targets)
+
+    # for fold, (trn_ind, val_ind) in enumerate(
+    #    MultilabelStratifiedKFold(
+    #        n_splits=FOLDS, random_state=SEED, shuffle=True
+    #    ).split(train_targets, train_targets)
+    # ):
+    # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
+    for fold, (trn_ind, val_ind) in tqdm(
+        enumerate(
+            MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False).split(
+                train_targets, train_targets
+            )
+        )
     ):
         K.clear_session()
         if MODEL == "5l":
@@ -1067,6 +1284,8 @@ def inference(
             model = create_model_2l(len(features))
         elif MODEL == "rs":
             model = create_model_rs(len(features), len(start_predictors))
+        elif MODEL == "3lWN":
+            model = create_model_3lWN(len(features))
 
         x_train, x_val = (
             train[features].values[trn_ind],
@@ -1074,7 +1293,8 @@ def inference(
         )
         y_train, y_val = train_targets.values[trn_ind], train_targets.values[val_ind]
 
-        model.load_weights(f"{PATH}/{MODEL}_{fold}_{SEED}.h5")
+        # model.load_weights(f"{PATH}/{MODEL}_{fold}_{SEED}.h5")
+        model.load_weights(f"{PATH}/{MODEL}_{fold}.h5")
 
         if MODEL == "rs":
             x_train_, x_val_ = (
@@ -1096,46 +1316,46 @@ def inference(
     return test_pred, oof_pred
 
 
-# Function to train our model with multiple seeds and average the predictions
-def run_multiple_seeds(
-    train,
-    test,
-    train_targets,
-    features,
-    start_predictors,
-    SEEDS=[123],
-    MODEL="3l",
-    PATH="../input/moa-3layer",
-):
-    """cvのseed変えて推論をseed アンサンブル"""
-    test_pred = []
-    oof_pred = []
-
-    for SEED in SEEDS:
-        print(f"\nUsing model {MODEL} with seed {SEED} for inference")
-        print(f"Trained with {len(features)} features")
-        test_pred_, oof_pred_ = inference(
-            train,
-            test,
-            train_targets,
-            features,
-            start_predictors,
-            SEED=SEED,
-            MODEL=MODEL,
-            PATH=PATH,
-        )
-        test_pred.append(test_pred_)
-        oof_pred.append(oof_pred_)
-        print("-" * 50)
-        print("\n")
-
-    test_pred = np.average(test_pred, axis=0)
-    oof_pred = np.average(oof_pred, axis=0)
-
-    seed_log_loss = mean_log_loss(train_targets.values, oof_pred)
-    print(f"Our out of folds log loss for our seed blend model is {seed_log_loss}")
-
-    return test_pred, oof_pred
+## Function to train our model with multiple seeds and average the predictions
+# def run_multiple_seeds(
+#    train,
+#    test,
+#    train_targets,
+#    features,
+#    start_predictors,
+#    SEEDS=[123],
+#    MODEL="3l",
+#    PATH="../input/moa-3layer",
+# ):
+#    """cvのseed変えて推論をseed アンサンブル"""
+#    test_pred = []
+#    oof_pred = []
+#
+#    for SEED in SEEDS:
+#        print(f"\nUsing model {MODEL} with seed {SEED} for inference")
+#        print(f"Trained with {len(features)} features")
+#        test_pred_, oof_pred_ = inference(
+#            train,
+#            test,
+#            train_targets,
+#            features,
+#            start_predictors,
+#            SEED=SEED,
+#            MODEL=MODEL,
+#            PATH=PATH,
+#        )
+#        test_pred.append(test_pred_)
+#        oof_pred.append(oof_pred_)
+#        print("-" * 50)
+#        print("\n")
+#
+#    test_pred = np.average(test_pred, axis=0)
+#    oof_pred = np.average(oof_pred, axis=0)
+#
+#    seed_log_loss = mean_log_loss(train_targets.values, oof_pred)
+#    print(f"Our out of folds log loss for our seed blend model is {seed_log_loss}")
+#
+#    return test_pred, oof_pred
 
 
 def submission(
@@ -1163,7 +1383,7 @@ def run_train(model_dir="model"):
             train_targets,
             features,
             start_predictors,
-            SEED=seed1,
+            # SEED=seed1,
             MODEL="5l",
             PATH=f"{model_dir}/moa-5layer",
         )
@@ -1174,7 +1394,7 @@ def run_train(model_dir="model"):
             train_targets,
             features,
             start_predictors,
-            SEED=seed2,
+            # SEED=seed2,
             MODEL="4l",
             PATH=f"{model_dir}/moa-4layer",
         )
@@ -1185,7 +1405,7 @@ def run_train(model_dir="model"):
             train_targets,
             features,
             start_predictors,
-            SEED=seed3,
+            # SEED=seed3,
             MODEL="3l",
             PATH=f"{model_dir}/moa-3layer",
         )
@@ -1196,7 +1416,7 @@ def run_train(model_dir="model"):
             train_targets,
             features,
             start_predictors,
-            SEED=seed4,
+            # SEED=seed4,
             MODEL="2l",
             PATH=f"{model_dir}/moa-2layer",
         )
@@ -1207,24 +1427,22 @@ def run_train(model_dir="model"):
             train_targets,
             features,
             start_predictors,
-            SEED=seed5,
+            # SEED=seed5,
             MODEL="rs",
             PATH=f"{model_dir}/moa-rs",
         )
 
     # Blend 5l, 4l, 3l and l2 dnn model
     oof_pred = np.average([oof_pred_5l, oof_pred_4l, oof_pred_3l, oof_pred_2l], axis=0)
-    seed_log_loss = mean_log_loss(train_targets.values, oof_pred)
-    str_loss1 = (
-        f"Our final out of folds log loss for our classic dnn blend is {seed_log_loss}"
-    )
+    oof_log_loss = mean_log_loss(train_targets.values, oof_pred)
+    str_loss1 = f"At last seed, our final out of folds log loss for our classic dnn blend is {oof_log_loss}"
     print(str_loss1)
     # test_pred = np.average([test_pred_5l, test_pred_4l, test_pred_3l, test_pred_2l], axis=0)
 
     # Blend the result of the previous model with the dnn resnet type model
     oof_pred = np.average([oof_pred, oof_pred_rs], axis=0)
-    seed_log_loss = mean_log_loss(train_targets.values, oof_pred)
-    str_loss2 = f"Our final out of folds log loss for our classic dnn + dnn resnet type model is {seed_log_loss}"
+    oof_log_loss = mean_log_loss(train_targets.values, oof_pred)
+    str_loss2 = f"At last seed, our final out of folds log loss for our classic dnn + dnn resnet type model is {oof_log_loss}"
     print(str_loss2)
     # test_pred = np.average([test_pred, test_pred_rs], axis=0)
 
@@ -1236,104 +1454,104 @@ def run_train(model_dir="model"):
         f.write(f"{str_loss1}\n{str_loss2}\n")
 
 
-def run_submission(
-    train, test, train_targets, features, sample_submission, model_dir="../input"
-):
-    """モデル推論してsubmissioファイル作成"""
-    # Inference time
-    test_pred_5l, oof_pred_5l = run_multiple_seeds(
-        train,
-        test,
-        train_targets,
-        features,
-        start_predictors,
-        SEEDS=SEEDS1,
-        MODEL="5l",
-        PATH=f"{model_dir}/moa-5layer",
-    )
-    test_pred_4l, oof_pred_4l = run_multiple_seeds(
-        train,
-        test,
-        train_targets,
-        features,
-        start_predictors,
-        SEEDS=SEEDS2,
-        MODEL="4l",
-        PATH=f"{model_dir}/moa-4layer",
-    )
-    test_pred_3l, oof_pred_3l = run_multiple_seeds(
-        train,
-        test,
-        train_targets,
-        features,
-        start_predictors,
-        SEEDS=SEEDS3,
-        MODEL="3l",
-        PATH=f"{model_dir}/moa-3layer",
-    )
-    test_pred_2l, oof_pred_2l = run_multiple_seeds(
-        train,
-        test,
-        train_targets,
-        features,
-        start_predictors,
-        SEEDS=SEEDS4,
-        MODEL="2l",
-        PATH=f"{model_dir}/moa-2layer",
-    )
-    test_pred_rs, oof_pred_rs = run_multiple_seeds(
-        train,
-        test,
-        train_targets,
-        features,
-        start_predictors,
-        SEEDS=SEEDS5,
-        MODEL="rs",
-        PATH=f"{model_dir}/moa-rs",
-    )
-
-    # Blend 5l, 4l, 3l and l2 dnn model
-    oof_pred = np.average([oof_pred_5l, oof_pred_4l, oof_pred_3l, oof_pred_2l], axis=0)
-    seed_log_loss = mean_log_loss(train_targets.values, oof_pred)
-    print(
-        f"Our final out of folds log loss for our classic dnn blend is {seed_log_loss}"
-    )
-    test_pred = np.average(
-        [test_pred_5l, test_pred_4l, test_pred_3l, test_pred_2l], axis=0
-    )
-
-    # Blend the result of the previous model with the dnn resnet type model
-    oof_pred = np.average([oof_pred, oof_pred_rs], axis=0)
-    seed_log_loss = mean_log_loss(train_targets.values, oof_pred)
-    print(
-        f"Our final out of folds log loss for our classic dnn + dnn resnet type model is {seed_log_loss}"
-    )
-    test_pred = np.average([test_pred, test_pred_rs], axis=0)
-
-    sample_submission = submission(test_pred, test, sample_submission, train_targets)
-    # sample_submission.head()
-
-    # ------- Nelder-Mead で最適なブレンディングの重み見つける -------
-    oof_preds = [oof_pred_5l, oof_pred_4l, oof_pred_3l, oof_pred_2l, oof_pred_rs]
-    best_weights = nelder_mead_weights(train_targets.values, oof_preds)
-    oof_pred_weights = (
-        best_weights[0] * oof_pred_5l
-        + best_weights[1] * oof_pred_4l
-        + best_weights[2] * oof_pred_3l
-        + best_weights[3] * oof_pred_2l
-        + best_weights[4] * oof_pred_rs
-    )
-    seed_log_loss = mean_log_loss(train_targets.values, oof_pred_weights)
-    print(f"Nelder-Mead dnn blend is {seed_log_loss}")
-    test_pred = (
-        best_weights[0] * test_pred_5l
-        + best_weights[1] * test_pred_4l
-        + best_weights[2] * test_pred_3l
-        + best_weights[3] * test_pred_2l
-        + best_weights[4] * test_pred_rs
-    )
-    sample_submission = submission(test_pred, out_csv="submission_Nelder-Mead.csv")
-    # ----------------------------------------------------------------
+# def run_submission(
+#    train, test, train_targets, features, sample_submission, model_dir="../input"
+# ):
+#    """モデル推論してsubmissioファイル作成"""
+#    # Inference time
+#    test_pred_5l, oof_pred_5l = run_multiple_seeds(
+#        train,
+#        test,
+#        train_targets,
+#        features,
+#        start_predictors,
+#        SEEDS=SEEDS1,
+#        MODEL="5l",
+#        PATH=f"{model_dir}/moa-5layer",
+#    )
+#    test_pred_4l, oof_pred_4l = run_multiple_seeds(
+#        train,
+#        test,
+#        train_targets,
+#        features,
+#        start_predictors,
+#        SEEDS=SEEDS2,
+#        MODEL="4l",
+#        PATH=f"{model_dir}/moa-4layer",
+#    )
+#    test_pred_3l, oof_pred_3l = run_multiple_seeds(
+#        train,
+#        test,
+#        train_targets,
+#        features,
+#        start_predictors,
+#        SEEDS=SEEDS3,
+#        MODEL="3l",
+#        PATH=f"{model_dir}/moa-3layer",
+#    )
+#    test_pred_2l, oof_pred_2l = run_multiple_seeds(
+#        train,
+#        test,
+#        train_targets,
+#        features,
+#        start_predictors,
+#        SEEDS=SEEDS4,
+#        MODEL="2l",
+#        PATH=f"{model_dir}/moa-2layer",
+#    )
+#    test_pred_rs, oof_pred_rs = run_multiple_seeds(
+#        train,
+#        test,
+#        train_targets,
+#        features,
+#        start_predictors,
+#        SEEDS=SEEDS5,
+#        MODEL="rs",
+#        PATH=f"{model_dir}/moa-rs",
+#    )
+#
+#    # Blend 5l, 4l, 3l and l2 dnn model
+#    oof_pred = np.average([oof_pred_5l, oof_pred_4l, oof_pred_3l, oof_pred_2l], axis=0)
+#    seed_log_loss = mean_log_loss(train_targets.values, oof_pred)
+#    print(
+#        f"Our final out of folds log loss for our classic dnn blend is {seed_log_loss}"
+#    )
+#    test_pred = np.average(
+#        [test_pred_5l, test_pred_4l, test_pred_3l, test_pred_2l], axis=0
+#    )
+#
+#    # Blend the result of the previous model with the dnn resnet type model
+#    oof_pred = np.average([oof_pred, oof_pred_rs], axis=0)
+#    seed_log_loss = mean_log_loss(train_targets.values, oof_pred)
+#    print(
+#        f"Our final out of folds log loss for our classic dnn + dnn resnet type model is {seed_log_loss}"
+#    )
+#    test_pred = np.average([test_pred, test_pred_rs], axis=0)
+#
+#    sample_submission = submission(test_pred, test, sample_submission, train_targets)
+#    # sample_submission.head()
+#
+#    # ------- Nelder-Mead で最適なブレンディングの重み見つける -------
+#    oof_preds = [oof_pred_5l, oof_pred_4l, oof_pred_3l, oof_pred_2l, oof_pred_rs]
+#    best_weights = nelder_mead_weights(train_targets.values, oof_preds)
+#    oof_pred_weights = (
+#        best_weights[0] * oof_pred_5l
+#        + best_weights[1] * oof_pred_4l
+#        + best_weights[2] * oof_pred_3l
+#        + best_weights[3] * oof_pred_2l
+#        + best_weights[4] * oof_pred_rs
+#    )
+#    seed_log_loss = mean_log_loss(train_targets.values, oof_pred_weights)
+#    print(f"Nelder-Mead dnn blend is {seed_log_loss}")
+#    test_pred = (
+#        best_weights[0] * test_pred_5l
+#        + best_weights[1] * test_pred_4l
+#        + best_weights[2] * test_pred_3l
+#        + best_weights[3] * test_pred_2l
+#        + best_weights[4] * test_pred_rs
+#    )
+#    sample_submission = submission(test_pred, out_csv="submission_Nelder-Mead.csv")
+#    # ----------------------------------------------------------------
 
 
 def nelder_mead_weights(y_true: np.ndarray, oof_preds: list):
@@ -1366,7 +1584,7 @@ def run_train_1model(
     logger=Logger("./"),
     model_dir="model",
     model_type="3l",
-    seeds=[5],
+    # seeds=[5],
     start_predictors=start_predictors,
 ):
     """1モデルだけ作成"""
@@ -1374,34 +1592,70 @@ def run_train_1model(
     try:
         # train time
         oof_pred = None
-        for _seed in seeds:
-            _test_pred, _oof_pred = train_and_evaluate(
-                train,
-                test,
-                train_targets,
-                features,
-                start_predictors,
-                SEED=_seed,
-                MODEL=model_type,
-                PATH=f"{model_dir}/moa-{model_type}",
-            )
-            if oof_pred is None:
-                oof_pred = _oof_pred
-            else:
-                oof_pred += _oof_pred
-        seed_log_loss = mean_log_loss(train_targets.values, oof_pred / len(seeds))
+        # for _seed in seeds:
+        _test_pred, _oof_pred = train_and_evaluate(
+            train,
+            test,
+            train_targets,
+            features,
+            start_predictors,
+            # SEED=_seed,
+            MODEL=model_type,
+            PATH=f"{model_dir}/moa-{model_type}",
+        )
+        if oof_pred is None:
+            oof_pred = _oof_pred
+        else:
+            oof_pred += _oof_pred
+        # oof_log_loss = mean_log_loss(train_targets.values, oof_pred / len(seeds))
+        oof_log_loss = mean_log_loss(train_targets.values, oof_pred)
 
         # oofのlossの値残しておく
-        seed_log_loss = round(seed_log_loss, 7)
+        oof_log_loss = round(oof_log_loss, 7)
         logger.result(
-            f"model_type:{model_type}, seed:{str(seeds)}, oof:{str(seed_log_loss)}"
+            # f"model_type:{model_type}, seed:{str(seeds)}, oof:{str(oof_log_loss)}"
+            f"model_type:{model_type}, oof:{str(oof_log_loss)}"
         )  # result.logに文字列書き込み
 
-        return seed_log_loss
+        return oof_log_loss
     except Exception as e:
         traceback.print_exc()
         # logger.result(f"Exception: {str(e)}")  # result.logに文字列書き込み
         return 0.0
+
+
+def run_5model(
+    train,
+    test,
+    train_targets,
+    features,
+    start_predictors=start_predictors,
+    logger=Logger("./"),
+):
+    seed_log_loss = 0.0
+    seed_log_loss += run_train_1model(
+        train, test, train_targets, features, logger=logger, model_type="2l",
+    )
+    seed_log_loss += run_train_1model(
+        train, test, train_targets, features, logger=logger, model_type="3l",
+    )
+    seed_log_loss += run_train_1model(
+        train, test, train_targets, features, logger=logger, model_type="4l",
+    )
+    seed_log_loss += run_train_1model(
+        train, test, train_targets, features, logger=logger, model_type="5l",
+    )
+    seed_log_loss += run_train_1model(
+        train,
+        test,
+        train_targets,
+        features,
+        logger=logger,
+        model_type="rs",
+        start_predictors=start_predictors,
+    )
+    mean_oof = round(seed_log_loss / 5, 7)
+    logger.result(f"mean_oof:{str(mean_oof)}")  # result.logに文字列書き込み
 
 
 if __name__ == "__main__":
@@ -1431,7 +1685,7 @@ if __name__ == "__main__":
     with open(OOF_TXT, mode="a") as f:
         f.write(f"### end run_train: {datetime.datetime.now()} ###\n\n")
 
-    run_submission(model_dir=OUT_MODEL)
+    # run_submission(model_dir=OUT_MODEL)
 
     with open(OOF_TXT, mode="a") as f:
         f.write(f"### end run_submission: {datetime.datetime.now()} ###")

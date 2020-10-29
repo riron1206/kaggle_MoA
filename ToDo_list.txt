@@ -21,9 +21,11 @@
 ・LightGBMを1モデルでマルチラベル学習。他のsklearnのモデルでも試せるようにする
 
 ・
+自分で試したのだと、
+PCAはsklearn.preprocessingのRobustScalerやStandardScalerと組み合わせでcv 0.00007ぐらい下がってました 
 
-
-train setだけPCAしたらshakeup する可能性ある
-
+train setだけでPCAしたらshakeup する可能性あるとディスカッション出てますね
 https://www.kaggle.com/c/lish-moa/discussion/193532
+
+
 
