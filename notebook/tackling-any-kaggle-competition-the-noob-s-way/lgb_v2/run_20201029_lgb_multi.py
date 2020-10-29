@@ -20,6 +20,7 @@ Usage:
 """
 import os
 import sys
+import datetime
 import joblib
 import warnings
 import numpy as np
@@ -401,12 +402,25 @@ def main_train():
         # "n_estimators": 100,
     }
     oof, sub = run_seed_avg(params)
+
+    if IS_CHAIN:
+        out_metric_txt = f"{OUTDIR}/oof_metric_chain.txt"
+    else:
+        out_metric_txt = f"{OUTDIR}/oof_metric_multi.txt"
+    oof_metric = f"oof_log_loss:, {mean_log_loss(train_targets, oof)}"
+    with open(out_metric_txt, mode="w") as f:
+        f.write(oof_metric)
+    print(oof_metric)
+
     submit(sub, test, submission, train_targets)
 
 
 if __name__ == "__main__":
-    train, train_targets, test = mapping_and_filter(train, train_targets, test)
+    print(
+        f"### start:", str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), "###"
+    )
 
+    train, train_targets, test = mapping_and_filter(train, train_targets, test)
     train, test, features = fe_stats(train, test, flag_add=False)
     train, test, features = c_squared(train, test)
     train, test, features = c_abs(train, test)
@@ -428,3 +442,7 @@ if __name__ == "__main__":
         with open(f"{OUTDIR}/objective_best_params.txt", mode="w") as f:
             f.write(str(study.best_params))
         print(f"\nstudy.best_params:\n{study.best_params}")
+
+    print(
+        f"### end:", str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), "###"
+    )
