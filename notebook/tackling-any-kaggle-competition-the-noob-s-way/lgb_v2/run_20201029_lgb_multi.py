@@ -397,7 +397,7 @@ def main_train():
         "max_depth": 5,
         "objective": "binary",
         "learning_rate": 0.01,
-        "n_estimators": 10000,
+        "n_estimators": 3000,
         # "n_estimators": 100,
     }
     oof, sub = run_seed_avg(params)
