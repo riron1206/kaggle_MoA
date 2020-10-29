@@ -431,6 +431,10 @@ def main_train():
 
 
 if __name__ == "__main__":
+    print(
+        f"### start:", str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), "###"
+    )
+
     train, train_targets, test = mapping_and_filter(train, train_targets, test)
     train, test = fe_stats(train, test)
     train, test = c_squared(train, test)
@@ -452,3 +456,7 @@ if __name__ == "__main__":
         with open(f"{OUTDIR}/objective_best_params.txt", mode="w") as f:
             f.write(str(study.best_params))
         print(f"\nstudy.best_params:\n{study.best_params}")
+
+    print(
+        f"### end:", str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), "###"
+    )
