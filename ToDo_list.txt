@@ -26,6 +26,7 @@ PCAはsklearn.preprocessingのRobustScalerやStandardScalerと組み合わせでcv 0.00007
 
 train setだけでPCAしたらshakeup する可能性あるとディスカッション出てますね
 https://www.kaggle.com/c/lish-moa/discussion/193532
+----------------------------------------------------------------------------
 
 20201030
 ◆来週試したいこと
@@ -33,7 +34,7 @@ https://www.kaggle.com/c/lish-moa/discussion/193532
 	- パラメータチューニング
 		- https://www.kaggle.com/fchollet/moa-keras-kerastuner-best-practices/?utm_campaign=piqcy&utm_medium=email&utm_source=Revue+newsletter
 ・LightGBM + ClassifierChain
-----------------------------------------------------------------------------
+
 ・TabNetの論文確認（https://arxiv.org/pdf/1908.07442.pdf）
 ・TabNetでスコア上げる
 	- https://www.kaggle.com/hiramcho/moa-tabnet-with-pca-rank-gauss
