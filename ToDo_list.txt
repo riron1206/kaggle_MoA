@@ -27,5 +27,32 @@ PCAはsklearn.preprocessingのRobustScalerやStandardScalerと組み合わせでcv 0.00007
 train setだけでPCAしたらshakeup する可能性あるとディスカッション出てますね
 https://www.kaggle.com/c/lish-moa/discussion/193532
 
+20201030
+◆来週試したいこと
+・MLPでスコア上げる
+	- パラメータチューニング
+		- https://www.kaggle.com/fchollet/moa-keras-kerastuner-best-practices/?utm_campaign=piqcy&utm_medium=email&utm_source=Revue+newsletter
+・LightGBM + ClassifierChain
+----------------------------------------------------------------------------
+・TabNetの論文確認（https://arxiv.org/pdf/1908.07442.pdf）
+・TabNetでスコア上げる
+	- https://www.kaggle.com/hiramcho/moa-tabnet-with-pca-rank-gauss
 
+・sklernでほかのモデル作成してアンサンブル
 
+・RNN (https://www.kaggle.com/c/lish-moa/discussion/193583)
+
+・異常検知
+	- https://www.kaggle.com/rahulsd91/moa-anomaly-detection
+
+・不均衡対策
+	- バッチ内でラベルのバランス保つように学習
+		- https://devblog.thebase.in/entry/2020/02/29/110000
+	- MLSMOTE
+		- https://www.kaggle.com/anonamename/upsampling-multilabel-data-with-mlsmote/edit
+
+・同種の薬のレコード見つける
+	- 統制群に対する値や散布図かく？
+	
+・マルチラベルコンペの上位解法参考にする
+	-https://www.kaggle.com/c/lish-moa/discussion/180092
