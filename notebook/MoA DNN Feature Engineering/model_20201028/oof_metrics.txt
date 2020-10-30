@@ -1,0 +1,14 @@
+### start run_train: 2020-10-29 00:55:23.460122 ###
+
+5l_seed:1: Our out of folds mean log loss score is 0.015424835431285897
+4l_seed:8: Our out of folds mean log loss score is 0.015504995581641598
+3l_seed:15: Our out of folds mean log loss score is 0.015281487690071423
+2l_seed:22: Our out of folds mean log loss score is 0.015326558264380681
+rs_seed:29: Our out of folds mean log loss score is 0.01579203735915683
+Our final out of folds log loss for our classic dnn blend is 0.015142782895123552
+Our final out of folds log loss for our classic dnn + dnn resnet type model is 0.015190095544538665
+### end run_train: 2020-10-29 01:18:47.079459 ###
+
+0.015142782895123552
+0.015190095544538665
+### end run_submission: 2020-10-29 01:19:37.921640 ###
