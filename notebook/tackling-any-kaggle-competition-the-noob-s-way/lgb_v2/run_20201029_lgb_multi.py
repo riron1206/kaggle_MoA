@@ -433,17 +433,19 @@ if __name__ == "__main__":
         main_train()
     else:
         if IS_CHAIN:
-            study_name = "study_chain"
+            _name = "_chain"
         else:
-            study_name = "study_multi"
+            _name = "_multi"
 
         study = optuna.create_study(
-            study_name=study_name,
-            storage=f"sqlite:///{OUTDIR}/{study_name}.db",
+            study_name=f"study{_name}",
+            storage=f"sqlite:///{OUTDIR}/study{_name}.db",
             load_if_exists=True,
         )
         study.optimize(objective, n_trials=N_TRIALS)
-        study.trials_dataframe().to_csv(f"{OUTDIR}/objective_history.csv", index=False)
+        study.trials_dataframe().to_csv(
+            f"{OUTDIR}/objective_history{_name}.csv", index=False
+        )
         with open(f"{OUTDIR}/objective_best_params.txt", mode="w") as f:
             f.write(str(study.best_params))
         print(f"\nstudy.best_params:\n{study.best_params}")

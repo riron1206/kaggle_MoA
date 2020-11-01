@@ -1,0 +1,1 @@
+{'max_depth': 2, 'min_child_samples': 5273, 'num_leaves': 3}

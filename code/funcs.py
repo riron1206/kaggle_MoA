@@ -43,6 +43,8 @@ LR = 0.001
 # Verbosity
 VERBOSE = 0
 
+# IS_ORDER_NONSCORED = False
+
 # Seed for deterministic results
 SEEDS1 = [1]
 SEEDS2 = [8]
@@ -568,6 +570,7 @@ class Logger:
 def load_orig_data():
     # train = pd.read_csv("../input/lish-moa/train_features.csv")
     # train_targets = pd.read_csv("../input/lish-moa/train_targets_scored.csv")
+    # train_targets_nonscored = pd.read_csv("../input/lish-moa/train_targets_nonscored.csv")
     # test = pd.read_csv("../input/lish-moa/test_features.csv")
     # sample_submission = pd.read_csv("../input/lish-moa/sample_submission.csv")
     DATADIR = (
@@ -575,10 +578,11 @@ def load_orig_data():
     )
     train = pd.read_csv(f"{DATADIR}/train_features.csv")
     train_targets = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
+    train_targets_nonscored = pd.read_csv(f"{DATADIR}/train_targets_nonscored.csv")
     test = pd.read_csv(f"{DATADIR}/test_features.csv")
     sample_submission = pd.read_csv(f"{DATADIR}/sample_submission.csv")
 
-    return train, train_targets, test, sample_submission
+    return train, train_targets, test, sample_submission, train_targets_nonscored
 
 
 # Function to seed everything
@@ -591,7 +595,14 @@ def seed_everything(seed=123):
 
 
 # Function to map an filter out control group
-def mapping_and_filter(train, train_targets, test):
+def mapping_and_filter(
+    train,
+    train_targets,
+    test,
+    train_targets_nonscored,
+    is_del_ctl=False,
+    is_conat_nonscore=False,
+):
     """前処理"""
     cp_type = {"trt_cp": 0, "ctl_vehicle": 1}
     cp_dose = {"D1": 0, "D2": 1}
@@ -600,16 +611,48 @@ def mapping_and_filter(train, train_targets, test):
         df["cp_dose"] = df["cp_dose"].map(cp_dose)
 
     # 完全なoofにするためデータ抜くのやめる 20201028
-    # ctl_vehicleは必ず0なので学習データから除く
-    # train_targets = train_targets[train["cp_type"] == 0].reset_index(drop=True)
-    # train = train[train["cp_type"] == 0].reset_index(drop=True)
+    if is_del_ctl:
+        # ctl_vehicleは必ず0なので学習データから除く
+        train_targets = train_targets[train["cp_type"] == 0].reset_index(drop=True)
+        train = train[train["cp_type"] == 0].reset_index(drop=True)
 
     # sig_id列はidなので不要
     train_targets.drop(["sig_id"], inplace=True, axis=1)
-    return train, train_targets, test
+    train_targets_nonscored.drop(["sig_id"], inplace=True, axis=1)
+
+    # nonscored と連結
+    if is_conat_nonscore:
+        train_targets_nonscored = train_targets_nonscored.loc[
+            :, ~(train_targets_nonscored.nunique() == 1)
+        ]  # nonscoredすべて0の列削除
+        train_targets = pd.concat([train_targets_nonscored, train_targets], axis=1)
+
+    return train, train_targets, test, train_targets_nonscored
 
 
+def get_features_gc(train, top_feat_cols=None):
+    """g-,c-列の列名取得"""
+    if top_feat_cols is None:
+        top_feat_cols = train.columns
+    features_g = [col for col in top_feat_cols if "g-" in col]
+    features_c = [col for col in top_feat_cols if "c-" in col]
+    return features_g, features_c
+
+
+def get_features(train):
+    """特徴量の列名取得"""
+    features = train.columns.to_list()
+    if "sig_id" in features:
+        features.remove("sig_id")
+    if "cp_type" in features:
+        features.remove("cp_type")
+    return features
+
+
+# ===================================================================================================
 # --------------------------------------- Feature-Engineering ---------------------------------------
+# ===================================================================================================
+
 # Function to scale our data
 def scaling(train, test, scaler=RobustScaler()):
     """規格化。pcaの後に実行してる。pcaの後だから外れ値にロバストな規格化使ってるみたい"""
@@ -618,16 +661,24 @@ def scaling(train, test, scaler=RobustScaler()):
     scaler.fit(pd.concat([train[features], test[features]], axis=0))
     train[features] = scaler.transform(train[features])
     test[features] = scaler.transform(test[features])
-    return train, test, features
+    return train, test, get_features(train)
 
 
 # Function to extract pca features
-def fe_pca(train, test, n_components_g=70, n_components_c=10, SEED=123):
+def fe_pca(
+    train,
+    test,
+    features_g=None,
+    features_c=None,
+    n_components_g=70,
+    n_components_c=10,
+    SEED=123,
+):
     """pcaで圧縮した特徴量追加"""
 
     # 特徴量分けているが大区分がgとcの2区分あるので、それぞれでpca
-    features_g = list(train.columns[4:776])
-    features_c = list(train.columns[776:876])
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
 
     def create_pca(train, test, features, kind="g", n_components=n_components_g):
         train_ = train[features].copy()
@@ -650,16 +701,22 @@ def fe_pca(train, test, n_components_g=70, n_components_c=10, SEED=123):
         train, test, features_c, kind="c", n_components=n_components_c
     )
 
-    features = train.columns[2:]
-    return train, test, features
+    return train, test, get_features(train)
 
 
 # Function to extract common stats features
-def fe_stats(train, test, params=["g", "c", "gc"], flag_add=False):
+def fe_stats(
+    train,
+    test,
+    features_g=None,
+    features_c=None,
+    params=["g", "c", "gc"],
+    flag_add=False,
+):
     """統計量の特徴量追加"""
 
-    features_g = list(train.columns[4:776])
-    features_c = list(train.columns[776:876])
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
 
     for df in [train, test]:
         if "g" in params:
@@ -702,18 +759,17 @@ def fe_stats(train, test, params=["g", "c", "gc"], flag_add=False):
                     df[features_g + features_c].min(axis=1)
                 )
 
-    features = train.columns[2:]
-    return train, test, features
+    return train, test, get_features(train)
 
 
-def fe_quantile_transformer(train, test):
+def fe_quantile_transformer(train, test, features_g=None, features_c=None):
     """QuantileTransformerで特徴量の分布を一様にする(RankGauss)"""
     # https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.QuantileTransformer.html
     # この変換は最も頻繁な値を分散させる傾向があります。また、（わずかな）外れ値の影響も軽減します。したがって、これは堅牢な前処理スキーム
     from sklearn.preprocessing import QuantileTransformer
 
-    features_g = list(train.columns[4:776])
-    features_c = list(train.columns[776:876])
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
 
     for col in features_g + features_c:
 
@@ -741,6 +797,7 @@ def fe_variance_threshold(train, test, threshold=0.8):
 
     var_thresh = VarianceThreshold(threshold)
     data = train.append(test)
+    # g-,c-列について適用
     data_transformed = var_thresh.fit_transform(data.iloc[:, 4:])
 
     train_transformed = data_transformed[: train.shape[0]]
@@ -757,16 +814,23 @@ def fe_variance_threshold(train, test, threshold=0.8):
     )
     test = pd.concat([test, pd.DataFrame(test_transformed)], axis=1)
 
-    features = train.columns[2:]
-    return train, test, features
+    return train, test, get_features(train)
 
 
-def fe_cluster(train, test, n_clusters_g=35, n_clusters_c=5, SEED=123):
+def fe_cluster(
+    train,
+    test,
+    features_g=None,
+    features_c=None,
+    n_clusters_g=35,
+    n_clusters_c=5,
+    SEED=123,
+):
     """KMeansで特徴量作成"""
     from sklearn.cluster import KMeans
 
-    features_g = list(train.columns[4:776])
-    features_c = list(train.columns[776:876])
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
 
     def create_cluster(train, test, features, kind="g", n_clusters=n_clusters_g):
         train_ = train[features].copy()
@@ -786,63 +850,102 @@ def fe_cluster(train, test, n_clusters_g=35, n_clusters_c=5, SEED=123):
         train, test, features_c, kind="c", n_clusters=n_clusters_c
     )
 
-    features = train.columns[2:]
-    return train, test, features
+    return train, test, get_features(train)
 
 
-def g_squared(train, test):
+def g_valid(train, test, features_g=None):
+    """gの特徴量の有効フラグ追加
+    gの絶対値>2,<2は薬が効いて、0近くだと効いてないらしい
+    https://www.kaggle.com/mrbhbs/discussion
+    """
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
+    for df in [train, test]:
+        for feature in features_g:
+            df[f"{feature}_valid"] = df[feature].apply(
+                lambda x: 1.0 if (np.abs(x) > 2) & (np.abs(x) < 2) else 0.0
+            )
+    return train, test, get_features(train)
+
+
+def g_squared(train, test, features_g=None):
     """gの特徴量を2乗した特徴量作成"""
-    features_g = list(train.columns[4:776])
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
     for df in [train, test]:
         for feature in features_g:
             df[f"{feature}_squared"] = df[feature] ** 2
-    features = train.columns[2:]
-    return train, test, features
+    return train, test, get_features(train)
 
 
-def g_binary(train, test):
+def g_binary(train, test, features_g=None):
     """gを正負で2値化した特徴量作成"""
-    features_g = list(train.columns[4:776])
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
     for df in [train, test]:
         for feature in features_g:
             df[f"{feature}_binary"] = df[feature].map(lambda x: 1.0 if x > 0.0 else 0.0)
-    features = train.columns[2:]
-    return train, test, features
+    return train, test, get_features(train)
 
 
-def c_squared(train, test):
+def g_abs(train, test, features_g=None):
+    """gの特徴量を絶対値とった特徴量作成"""
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
+    for df in [train, test]:
+        for feature in features_g:
+            df[f"{feature}_abs"] = np.abs(df[feature])
+    return train, test, get_features(train)
+
+
+def c_squared(train, test, features_c=None):
     """cの特徴量を2乗した特徴量作成"""
-    features_c = list(train.columns[776:876])
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
     for df in [train, test]:
         for feature in features_c:
             df[f"{feature}_squared"] = df[feature] ** 2
-    features = train.columns[2:]
-    return train, test, features
+    return train, test, get_features(train)
 
 
-def c_abs(train, test):
+def c_binary(train, test, features_c=None):
+    """cを正負で2値化した特徴量作成"""
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
+    for df in [train, test]:
+        for feature in features_c:
+            df[f"{feature}_binary"] = df[feature].map(lambda x: 1.0 if x > 0.0 else 0.0)
+    return train, test, get_features(train)
+
+
+def c_abs(train, test, features_c=None):
     """cの特徴量を絶対値とった特徴量作成"""
-    features_c = list(train.columns[776:876])
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
     for df in [train, test]:
         for feature in features_c:
             df[f"{feature}_abs"] = np.abs(df[feature])
-    features = train.columns[2:]
-    return train, test, features
+    return train, test, get_features(train)
 
 
 def drop_col(train, test, col="cp_type"):
     """特徴量1列削除"""
     train = train.drop(col, axis=1)
     test = test.drop(col, axis=1)
-    features = train.columns[2:]
-    return train, test, features
+    return train, test, get_features(train)
 
 
-def fe_ctl_mean(train, test):
+def fe_ctl_mean(
+    train,
+    test,
+    features_g=None,
+    features_c=None,
+    gc_flg="gc",
+    is_mean=True,
+    is_ratio=True,
+):
     """cp_type=ctl_vehicle のコントロールのレコードの平均との差、比率の特徴量追加"""
-    features_g = list(train.columns[4:776])
-    features_c = list(train.columns[776:876])
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
     features_gc = features_g + features_c
+    if gc_flg == "g":
+        features_gc = features_g
+    elif gc_flg == "c":
+        features_gc = features_c
+
     df = pd.concat([train, test], axis=0)
 
     # コントロールのレコードの条件ごとに平均出す
@@ -852,16 +955,20 @@ def fe_ctl_mean(train, test):
             df_ctl = df[
                 (df["cp_type"] == 1) & (df["cp_time"] == time) & (df["cp_dose"] == dose)
             ]
-            ctl_mean = df_ctl[features_gc].apply(lambda x: np.mean(x), axis=0)
-            dict_ctl[f"ctl_mean_{dose}_{time}"] = ctl_mean
-            # ctl_median = df_ctl[features_gc].apply(lambda x: np.median(x), axis=0)
-            # dict_ctl[f"ctl_median_{dose}_{time}"] = ctl_median
+            if is_mean:
+                ctl_mean = df_ctl[features_gc].apply(lambda x: np.mean(x), axis=0)
+                dict_ctl[f"ctl_mean_{dose}_{time}"] = ctl_mean
+            else:
+                ctl_median = df_ctl[features_gc].apply(lambda x: np.median(x), axis=0)
+                dict_ctl[f"ctl_median_{dose}_{time}"] = ctl_median
 
     # 平均との差、比
     for k, v in dict_ctl.items():
         for fe, me in tqdm(zip(features_gc, v)):
-            # df[f"{fe}_diff_{k}"] = df[fe] - me
-            df[f"{fe}_ratio_{k}"] = df[fe] / me
+            if is_ratio:
+                df[f"{fe}_ratio_{k}"] = df[fe] / me
+            else:
+                df[f"{fe}_diff_{k}"] = df[fe] - me
 
     train_ = df.iloc[: train.shape[0]]
     test_ = df.iloc[train.shape[0] :].reset_index(drop=True)
@@ -870,18 +977,69 @@ def fe_ctl_mean(train, test):
     return train_, test_, features
 
 
-# ---------------------------------------------------------------------------------------------------
+# ===================================================================================================
 
+
+# ===================================================================================================
+# ---------------------------------------------- Other ----------------------------------------------
+# ===================================================================================================
+def targets_gather(train_targets, is_enc=False):
+    """目的変数列を1列にまとめてラベルエンコディング"""
+    _targets = train_targets.copy()
+    _targets["targets"] = ""
+    for ii in range(len(train_targets.columns)):
+        _targets["targets"] += _targets.iloc[:, ii].astype("str") + "_"
+
+    _df = None
+    if is_enc:
+        _targets["targets"], uni = pd.factorize(_targets["targets"])
+        _df = pd.DataFrame({"label": list(range(len(uni))), "value": uni})
+        # display(_df)
+
+    return _targets["targets"], _df
+
+
+# ===================================================================================================
+
+
+# ===================================================================================================
+# ---------------------------------------------- Model ----------------------------------------------
+# ===================================================================================================
 
 # Function to calculate the mean log loss of the targets including clipping
-def mean_log_loss(y_true, y_pred):
+def mean_log_loss(y_true, y_pred, n_class=206):
     """マルチラベル全体でlog lossを平均する"""
-    # 評価指標がlog losだからか？+label smoothingするため、予測ラベルはクリッピングする
+    assert (
+        y_true.shape[1] == n_class
+    ), f"train_targetsの列数が {n_class} でないからlog_loss計算できない.y_true.shape: {y_true.shape}"
+
     y_pred = np.clip(y_pred, 1e-15, 1 - 1e-15)
     metrics = []
-    for target in range(206):
+    for target in range(n_class):
         metrics.append(log_loss(y_true[:, target], y_pred[:, target]))
     return np.mean(metrics)
+
+
+def mean_log_loss_train_targets_oof(y_pred):
+    """train_targetsのoof用mean_log_loss"""
+    # mean_log_loss計算用に再ロード
+    _, _train_targets, _, _, _ = load_orig_data()
+    _train_targets.drop(["sig_id"], inplace=True, axis=1)
+    return mean_log_loss(_train_targets.values, y_pred, n_class=206)
+
+
+def create_model_lr(shape, output_node=206, drop=0.5):
+    """ロジスティック回帰.dropoutあり"""
+    inp = tf.keras.layers.Input(shape=(shape))
+    x = tf.keras.layers.Dropout(drop)(inp)
+    out = tf.keras.layers.Dense(output_node, activation="sigmoid")(x)
+    model = tf.keras.models.Model(inputs=inp, outputs=out)
+    model.compile(
+        optimizer=tf.optimizers.Adam(learning_rate=0.001),
+        loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.001),
+        metrics=tf.keras.metrics.BinaryCrossentropy(),
+    )
+    return model
 
 
 def create_model_3lWN(shape):
@@ -1102,12 +1260,20 @@ def create_model_2l(shape):
     return model
 
 
+# ===================================================================================================
+
+
+# ===================================================================================================
+# ------------------------------------------ Train/Prewdict -----------------------------------------
+# ===================================================================================================
+
 # Function to train our dnn
 def train_and_evaluate(
     train,
     test,
     train_targets,
     features,
+    train_targets_nonscored,
     start_predictors,
     # SEED=123,
     MODEL="3l",
@@ -1209,8 +1375,8 @@ def train_and_evaluate(
 
             model.load_weights(model_path)
 
-            oof_pred[val_ind] = model.predict([x_val, x_val_])
-            test_pred += (
+            y_pred_val = model.predict([x_val, x_val_])
+            y_pred_test = (
                 model.predict([test[features].values, test[start_predictors].values])
                 / FOLDS
             )
@@ -1228,10 +1394,18 @@ def train_and_evaluate(
 
             model.load_weights(model_path)
 
-            oof_pred[val_ind] = model.predict(x_val)
-            test_pred += model.predict(test[features].values) / FOLDS
+            y_pred_val = model.predict(x_val)
+            y_pred_test = model.predict(test[features].values) / FOLDS
 
-    oof_score = mean_log_loss(train_targets.values, oof_pred)
+        if y_pred_val.shape[1] > 206:
+            # targetの列だけにする
+            y_pred_val = y_pred_val[:, train_targets_nonscored.shape[1] :]
+            y_pred_test = y_pred_test[:, train_targets_nonscored.shape[1] :]
+
+        oof_pred[val_ind] = y_pred_val
+        test_pred += y_pred_test
+
+    # oof_score = mean_log_loss_train_targets_oof(oof_pred)
     # str_loss = f"Our out of folds mean log loss score is {oof_score}"
     # print(str_loss)
 
@@ -1248,6 +1422,7 @@ def inference(
     test,
     train_targets,
     features,
+    train_targets_nonscored,
     start_predictors,
     # SEED=123,
     MODEL="3l",
@@ -1301,16 +1476,24 @@ def inference(
                 train[start_predictors].values[trn_ind],
                 train[start_predictors].values[val_ind],
             )
-            oof_pred[val_ind] = model.predict([x_val, x_val_])
-            test_pred += (
+            y_pred_val = model.predict([x_val, x_val_])
+            y_pred_test = (
                 model.predict([test[features].values, test[start_predictors].values])
                 / FOLDS
             )
         else:
-            oof_pred[val_ind] = model.predict(x_val)
-            test_pred += model.predict(test[features].values) / FOLDS
+            y_pred_val = model.predict(x_val)
+            y_pred_test = model.predict(test[features].values) / FOLDS
 
-    oof_score = mean_log_loss(train_targets.values, oof_pred)
+        if y_pred_val.shape[1] > 206:
+            # targetの列だけにする
+            y_pred_val = y_pred_val[:, train_targets_nonscored.shape[1] :]
+            y_pred_test = y_pred_test[:, train_targets_nonscored.shape[1] :]
+
+        oof_pred[val_ind] = y_pred_val
+        test_pred += y_pred_test
+
+    oof_score = mean_log_loss_train_targets_oof(oof_pred)
     print(f"Our out of folds mean log loss score is {oof_score}")
 
     return test_pred, oof_pred
@@ -1434,14 +1617,14 @@ def run_train(model_dir="model"):
 
     # Blend 5l, 4l, 3l and l2 dnn model
     oof_pred = np.average([oof_pred_5l, oof_pred_4l, oof_pred_3l, oof_pred_2l], axis=0)
-    oof_log_loss = mean_log_loss(train_targets.values, oof_pred)
+    oof_log_loss = mean_log_loss_train_targets_oof(oof_pred)
     str_loss1 = f"At last seed, our final out of folds log loss for our classic dnn blend is {oof_log_loss}"
     print(str_loss1)
     # test_pred = np.average([test_pred_5l, test_pred_4l, test_pred_3l, test_pred_2l], axis=0)
 
     # Blend the result of the previous model with the dnn resnet type model
     oof_pred = np.average([oof_pred, oof_pred_rs], axis=0)
-    oof_log_loss = mean_log_loss(train_targets.values, oof_pred)
+    oof_log_loss = mean_log_loss_train_targets_oof(oof_pred)
     str_loss2 = f"At last seed, our final out of folds log loss for our classic dnn + dnn resnet type model is {oof_log_loss}"
     print(str_loss2)
     # test_pred = np.average([test_pred, test_pred_rs], axis=0)
@@ -1581,11 +1764,13 @@ def run_train_1model(
     test,
     train_targets,
     features,
+    train_targets_nonscored,
     logger=Logger("./"),
     model_dir="model",
     model_type="3l",
     # seeds=[5],
     start_predictors=start_predictors,
+    str_condition="",
 ):
     """1モデルだけ作成"""
     os.makedirs(f"{model_dir}/moa-{model_type}", exist_ok=True)
@@ -1598,6 +1783,7 @@ def run_train_1model(
             test,
             train_targets,
             features,
+            train_targets_nonscored,
             start_predictors,
             # SEED=_seed,
             MODEL=model_type,
@@ -1607,14 +1793,17 @@ def run_train_1model(
             oof_pred = _oof_pred
         else:
             oof_pred += _oof_pred
-        # oof_log_loss = mean_log_loss(train_targets.values, oof_pred / len(seeds))
-        oof_log_loss = mean_log_loss(train_targets.values, oof_pred)
+
+        oof_log_loss = mean_log_loss_train_targets_oof(oof_pred)
 
         # oofのlossの値残しておく
         oof_log_loss = round(oof_log_loss, 7)
-        logger.result(
-            # f"model_type:{model_type}, seed:{str(seeds)}, oof:{str(oof_log_loss)}"
+
+        logger.info(
             f"model_type:{model_type}, oof:{str(oof_log_loss)}"
+        )  # general.logに文字列書き込み
+        logger.result(
+            f"{model_type}\t{str_condition}\t{str(oof_log_loss)}"
         )  # result.logに文字列書き込み
 
         return oof_log_loss
@@ -1629,40 +1818,81 @@ def run_5model(
     test,
     train_targets,
     features,
+    train_targets_nonscored,
     start_predictors=start_predictors,
     logger=Logger("./"),
+    str_condition="",
 ):
     seed_log_loss = 0.0
     seed_log_loss += run_train_1model(
-        train, test, train_targets, features, logger=logger, model_type="2l",
-    )
-    seed_log_loss += run_train_1model(
-        train, test, train_targets, features, logger=logger, model_type="3l",
-    )
-    seed_log_loss += run_train_1model(
-        train, test, train_targets, features, logger=logger, model_type="4l",
-    )
-    seed_log_loss += run_train_1model(
-        train, test, train_targets, features, logger=logger, model_type="5l",
+        train,
+        test,
+        train_targets,
+        features,
+        train_targets_nonscored,
+        logger=logger,
+        model_type="2l",
+        str_condition=str_condition,
     )
     seed_log_loss += run_train_1model(
         train,
         test,
         train_targets,
         features,
+        train_targets_nonscored,
+        logger=logger,
+        model_type="3l",
+        str_condition=str_condition,
+    )
+    seed_log_loss += run_train_1model(
+        train,
+        test,
+        train_targets,
+        features,
+        train_targets_nonscored,
+        logger=logger,
+        model_type="4l",
+        str_condition=str_condition,
+    )
+    seed_log_loss += run_train_1model(
+        train,
+        test,
+        train_targets,
+        features,
+        train_targets_nonscored,
+        logger=logger,
+        model_type="5l",
+        str_condition=str_condition,
+    )
+    seed_log_loss += run_train_1model(
+        train,
+        test,
+        train_targets,
+        features,
+        train_targets_nonscored,
         logger=logger,
         model_type="rs",
         start_predictors=start_predictors,
+        str_condition=str_condition,
     )
     mean_oof = round(seed_log_loss / 5, 7)
-    logger.result(f"mean_oof:{str(mean_oof)}")  # result.logに文字列書き込み
+    logger.info(f"mean_oof:{str(mean_oof)}")  # general.logに文字列書き込み
+
+
+# ===================================================================================================
 
 
 if __name__ == "__main__":
     OOF_TXT = "oof.txt"
     OUT_MODEL = "model"
 
-    train, train_targets, test, sample_submission = load_orig_data()
+    (
+        train,
+        train_targets,
+        test,
+        sample_submission,
+        train_targets_nonscored,
+    ) = load_orig_data()
 
     train, train_targets, test = mapping_and_filter(train, train_targets, test)
     train, test = fe_stats(train, test)
