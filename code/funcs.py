@@ -47,7 +47,7 @@ def run_train_logger(
     str_condition="",
     p_min=1e-15,
 ):
-    """モデルだけ作成してログファイルに結果書き込む"""
+    """モデル作成してログファイルに結果書き込む"""
     try:
         # train time
         test_pred, oof_pred = mlp_tf.train_and_evaluate(
@@ -82,7 +82,9 @@ def run_trains_logger(
     train_targets_nonscored,
     logger=logger,
     str_condition="",
+    model_types=["lr", "2l", "3l", "4l", "5l", "3l_v2", "3lWN"],
 ):
+    """モデルブレンディングしてログファイルに結果書き込む"""
     try:
         test_preds = []
         oof_preds = []
@@ -101,14 +103,9 @@ def run_trains_logger(
             test_preds.append(test_pred)
             oof_preds.append(oof_pred)
 
-        _train("lr", str_condition)
-        _train("2l", str_condition)
-        _train("3l", str_condition)
-        _train("4l", str_condition)
-        _train("5l", str_condition)
-        _train("3l_v2", str_condition)
-        _train("3lWN", str_condition)
-        model_type = "lr-2l-3l-4l-5l-3l_v2-3lWN"
+        for m_t in model_types:
+            _train(m_t, str_condition)
+        model_type = "-".join(model_types)
 
         mean_oof = np.average(oof_preds, axis=0)
         mean_oof = mlp_tf.mean_oof / len(oof_preds)
