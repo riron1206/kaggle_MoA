@@ -108,7 +108,7 @@ def run_trains_logger(
         model_type = "-".join(model_types)
 
         mean_oof = np.average(oof_preds, axis=0)
-        mean_oof = mlp_tf.mean_oof / len(oof_preds)
+        mean_oof = mean_oof / len(oof_preds)
         log_loss = mlp_tf.mean_log_loss_train_targets_oof(mean_oof)
         log_loss = round(log_loss, 7)
         logger.info(
