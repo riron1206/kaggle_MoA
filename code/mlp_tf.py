@@ -6,11 +6,6 @@ import sys
 import traceback
 import random
 import warnings
-
-# sys.path.append('../input/iterative-stratification/iterative-stratification-master')
-sys.path.append(r"C:\Users\81908\Git\iterative-stratification")
-from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
-
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -19,15 +14,30 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 import tensorflow_addons as tfa
 
-# Adamを改良したAdaBelief https://github.com/juntang-zhuang/Adabelief-Optimizer
-from adabelief_tf import AdaBeliefOptimizer
-
 
 current_dir = pathlib.Path(__file__).resolve().parent
 sys.path.append(str(current_dir))
 
+from datasets import drug_MultilabelStratifiedKFold
+from params import (
+    FOLDS,
+    EPOCHS,
+    BATCH_SIZE,
+    LR,
+    VERBOSE,
+    DATADIR,
+    # ITERATIVE_STRATIFICATION,
+    ADABELIEF_TF,
+)
 from util import Logger
-from params import FOLDS, EPOCHS, BATCH_SIZE, LR, VERBOSE, DATADIR
+import tabnet_tf
+
+# Adamを改良したAdaBelief https://github.com/juntang-zhuang/Adabelief-Optimizer
+sys.path.append(ADABELIEF_TF)
+from adabelief_tf import AdaBeliefOptimizer
+
+# sys.path.append(ITERATIVE_STRATIFICATION)
+# from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 
 warnings.filterwarnings("ignore")
 
@@ -493,11 +503,12 @@ def seed_everything(seed=123):
 
 
 def submission_post_process(
-    test_pred, test, out_csv="submission.csv", p_min=None, is_minor_correction=False,
+    test_pred, out_csv="submission.csv", p_min=None, is_minor_correction=False,
 ):
     """submitファイル後処理+保存"""
     _train_targets = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
     _train_targets.drop(["sig_id"], inplace=True, axis=1)
+    _test = pd.read_csv(f"{DATADIR}/test_features.csv")
 
     sample_submission = pd.read_csv(f"{DATADIR}/sample_submission.csv")
     sample_submission.loc[:, _train_targets.columns] = test_pred
@@ -517,7 +528,7 @@ def submission_post_process(
         sample_submission.loc[:, targets] = 0.000012
 
     # crl行は0
-    sample_submission.loc[test["cp_type"] == 1, _train_targets.columns] = 0
+    sample_submission.loc[_test["cp_type"] == 1, _train_targets.columns] = 0
     sample_submission.to_csv(out_csv, index=False)
     return sample_submission
 
@@ -823,6 +834,61 @@ def create_model_2l(shape, n_class=206):
     return model
 
 
+def create_model_tabnet(
+    shape, n_class=206, params=None, is_SWA=False, is_Lookahead=False, is_adabelief=True
+):
+    params = dict(
+        feature_columns=None,
+        num_classes=n_class,
+        # num_layers=2,
+        #        feature_dim=32,
+        #        output_dim=32,
+        num_features=shape,
+        # num_decision_steps=2,
+        #        relaxation_factor=1.3,
+        #        sparsity_coefficient=0.0,
+        #        batch_momentum=0.98,
+        #        virtual_batch_size=24,
+        #        norm_type="group",
+        num_groups=-1,
+        multi_label=True,
+    )
+    print(params)
+    if params is None:
+        model = tabnet_tf.StackedTabNetClassifier(
+            feature_columns=None,
+            num_classes=n_class,
+            num_layers=2,
+            feature_dim=128,
+            output_dim=64,
+            num_features=shape,
+            num_decision_steps=1,
+            relaxation_factor=1.5,
+            sparsity_coefficient=1e-5,
+            batch_momentum=0.98,
+            virtual_batch_size=None,
+            norm_type="group",
+            num_groups=-1,
+            multi_label=True,
+        )
+    else:
+        model = tabnet_tf.StackedTabNetClassifier(**params)
+    if is_adabelief:
+        opt = AdaBeliefOptimizer(learning_rate=LR)
+    else:
+        opt = tf.optimizers.Adam(LR)
+    if is_SWA:
+        opt = tfa.optimizers.Lookahead(opt, sync_period=10)
+    if is_Lookahead:
+        opt = tfa.optimizers.SWA(opt)
+    model.compile(
+        optimizer=opt,
+        loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.001),
+        metrics=tf.keras.metrics.BinaryCrossentropy(),
+    )
+    return model
+
+
 # ===================================================================================================
 # ------------------------------------------ Train/Prewdict -----------------------------------------
 # ===================================================================================================
@@ -837,10 +903,10 @@ def train_and_evaluate(
     start_predictors=start_predictors,
     seeds=[123],
     model_type="3l",
-    model_dir="model",
+    model_dir="mlp_tf",
 ):
     """モデル作成"""
-    print(f"fold:{FOLDS}, epochs:{EPOCHS}")
+    print(f"fold:{FOLDS}, epochs:{EPOCHS}, batch_size:{BATCH_SIZE}, LR:{LR}")
     os.makedirs(model_dir, exist_ok=True)
 
     test_pred_seed = []
@@ -862,16 +928,16 @@ def train_and_evaluate(
         #        ).split(train_targets, train_targets)
         #    )
         # ):
-        # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
-        for fold, (trn_ind, val_ind) in tqdm(
-            enumerate(
-                MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False).split(
-                    train_targets, train_targets
-                )
-            )
-        ):
+        # # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
+        # for fold, (trn_ind, val_ind) in tqdm(enumerate(MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False).split(train_targets, train_targets))):
+        # 薬物およびマルチラベル層別化 20201104
+        # scored = drug_MultilabelStratifiedKFold(seed=seed) # MultilabelStratifiedKFoldの乱数指定
+        scored = drug_MultilabelStratifiedKFold()  # MultilabelStratifiedKFoldの乱数固定
+        for fold in tqdm(range(FOLDS)):
+            val_ind = scored[scored["fold"] == fold].index
+            trn_ind = scored[scored["fold"] != fold].index
+
             K.clear_session()
-            model_path = f"{model_dir}/{model_type}_{fold}_{seed}.h5"
             if model_type == "5l":
                 model = create_model_5l(len(features), n_class=train_targets.shape[1])
             elif model_type == "4l":
@@ -892,6 +958,11 @@ def train_and_evaluate(
                 model = create_model_3lWN(len(features), n_class=train_targets.shape[1])
             elif model_type == "lr":
                 model = create_model_lr(len(features), n_class=train_targets.shape[1])
+            elif model_type == "tabnet":
+                model = create_model_tabnet(
+                    len(features), n_class=train_targets.shape[1]
+                )
+            model_path = f"{model_dir}/{model_type}_{fold}_{seed}.h5"
 
             early_stopping = tf.keras.callbacks.EarlyStopping(
                 monitor="val_binary_crossentropy",
@@ -983,7 +1054,7 @@ def train_and_evaluate(
             test_pred += y_pred_test
 
             del model
-            x = gc.collect()
+            gc.collect()
 
         oof_score = mean_log_loss_train_targets_oof(oof_pred)
         print(f"Our out of folds mean log loss score is {oof_score}")
@@ -997,7 +1068,9 @@ def train_and_evaluate(
     seed_log_loss = mean_log_loss_train_targets_oof(oof_pred_avg)
     print(f"Our out of folds log loss for our seed blend model is {seed_log_loss}")
 
-    sample_submission_pred = submission_post_process(test_pred_avg, test)
+    sample_submission_pred = submission_post_process(
+        test_pred_avg, out_csv=f"{model_dir}/submission.csv"
+    )
 
     return test_pred_avg, oof_pred_avg
 
@@ -1011,7 +1084,7 @@ def inference(
     start_predictors=start_predictors,
     seeds=[123],
     model_type="3l",
-    model_dir="model",
+    model_dir="mlp_tf",
 ):
     """推論用"""
     test_pred_seed = []
@@ -1031,15 +1104,25 @@ def inference(
         #        n_splits=FOLDS, random_state=seed, shuffle=True
         #    ).split(train_targets, train_targets)
         # ):
-        # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
-        for fold, (trn_ind, val_ind) in tqdm(
-            enumerate(
-                MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False).split(
-                    train_targets, train_targets
-                )
-            )
-        ):
+        # # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
+        # for fold, (trn_ind, val_ind) in tqdm(enumerate(MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False).split(train_targets, train_targets))):
+        # 薬物およびマルチラベル層別化 20201104
+        # scored = drug_MultilabelStratifiedKFold(seed=seed) # MultilabelStratifiedKFoldの乱数指定
+        scored = drug_MultilabelStratifiedKFold()  # MultilabelStratifiedKFoldの乱数固定
+        for fold in tqdm(range(FOLDS)):
+            val_ind = scored[scored["fold"] == fold].index
+            trn_ind = scored[scored["fold"] != fold].index
+
             K.clear_session()
+            x_train, x_val = (
+                train[features].values[trn_ind],
+                train[features].values[val_ind],
+            )
+            y_train, y_val = (
+                train_targets.values[trn_ind],
+                train_targets.values[val_ind],
+            )
+
             if model_type == "5l":
                 model = create_model_5l(len(features), n_class=train_targets.shape[1])
             elif model_type == "4l":
@@ -1048,7 +1131,7 @@ def inference(
                 model = create_model_3l(len(features), n_class=train_targets.shape[1])
             elif model_type == "3l_v2":
                 model = create_model_3l_v2(
-                    len(features), n_class=train_targets.shape[1], eps=eps
+                    len(features), n_class=train_targets.shape[1]
                 )
             elif model_type == "2l":
                 model = create_model_2l(len(features), n_class=train_targets.shape[1])
@@ -1060,17 +1143,20 @@ def inference(
                 model = create_model_3lWN(len(features), n_class=train_targets.shape[1])
             elif model_type == "lr":
                 model = create_model_lr(len(features), n_class=train_targets.shape[1])
-
+            elif model_type == "tabnet":
+                model = create_model_tabnet(
+                    len(features), n_class=train_targets.shape[1]
+                )
+                # tabnetはサブクラスモデルなのでfit しないとロードできないため、1エポックだけ実行
+                model.fit(
+                    x_train,
+                    y_train,
+                    validation_data=(x_val, y_val),
+                    epochs=1,
+                    batch_size=BATCH_SIZE,
+                    verbose=VERBOSE,
+                )
             model.load_weights(f"{model_dir}/{model_type}_{fold}_{seed}.h5")
-
-            x_train, x_val = (
-                train[features].values[trn_ind],
-                train[features].values[val_ind],
-            )
-            y_train, y_val = (
-                train_targets.values[trn_ind],
-                train_targets.values[val_ind],
-            )
 
             if model_type == "rs":
                 x_train_, x_val_ = (
@@ -1096,6 +1182,9 @@ def inference(
             oof_pred[val_ind] = y_pred_val
             test_pred += y_pred_test
 
+            del model
+            gc.collect()
+
         oof_score = mean_log_loss_train_targets_oof(oof_pred)
         print(f"Our out of folds mean log loss score is {oof_score}")
 
@@ -1108,7 +1197,9 @@ def inference(
     seed_log_loss = mean_log_loss_train_targets_oof(oof_pred_avg)
     print(f"Our out of folds log loss for our seed blend model is {seed_log_loss}")
 
-    sample_submission_pred = submission_post_process(test_pred_avg, test)
+    sample_submission_pred = submission_post_process(
+        test_pred_avg, out_csv=f"{model_dir}/submission.csv"
+    )
 
     return test_pred_avg, oof_pred_avg
 
@@ -1133,3 +1224,145 @@ def nelder_mead_weights(y_true: np.ndarray, oof_preds: list):
     )
     best_weights = result.x
     return best_weights
+
+
+# ===================================================================================================
+# ---------------------------------------------- Logging --------------------------------------------
+# ===================================================================================================
+
+
+def run_mlp_tf_logger(
+    train,
+    test,
+    train_targets,
+    features,
+    train_targets_nonscored,
+    logger=Logger("./"),
+    model_dir="mlp_tf",
+    model_type="3l",
+    seeds=[123],
+    str_condition="",
+    p_min=1e-15,
+    is_train=True,
+):
+    """モデル作成/推論してログファイルに結果書き込む"""
+    str_train_flag = "train" if is_train else "inference"
+    if is_train:
+        # train
+        test_pred, oof_pred = train_and_evaluate(
+            train,
+            test,
+            train_targets,
+            features,
+            train_targets_nonscored,
+            seeds=seeds,
+            model_type=model_type,
+            model_dir=model_dir,
+        )
+    else:
+        # inference
+        test_pred, oof_pred = inference(
+            train,
+            test,
+            train_targets,
+            features,
+            train_targets_nonscored,
+            seeds=seeds,
+            model_type=model_type,
+            model_dir=model_dir,
+        )
+    oof_log_loss = mean_log_loss_train_targets_oof(oof_pred, p_min=p_min)
+    oof_log_loss = round(oof_log_loss, 7)
+    logger.info(
+        f"model_type:{model_type}, oof:{str(oof_log_loss)}, train_flag:{str_train_flag}"
+    )  # general.logに文字列書き込み
+    logger.result(
+        f"{model_type}\t{str_condition}\t{str(oof_log_loss)}\t{str_train_flag}"
+    )  # result.logに文字列書き込み
+    return test_pred, oof_pred
+
+
+def run_mlp_tf_blend_logger(
+    train,
+    test,
+    train_targets,
+    features,
+    train_targets_nonscored,
+    logger=Logger("./"),
+    model_dir="mlp_tf",
+    seeds=[123],
+    str_condition="",
+    model_types=["lr", "2l", "3l", "4l", "5l", "3l_v2", "3lWN", "tabnet"],
+    is_train=True,
+):
+    """モデルブレンディングしてログファイルに結果書き込む"""
+    str_train_flag = "train" if is_train else "inference"
+    test_preds = []
+    oof_preds = []
+
+    def _run_model(_model_type, _str_condition):
+        test_pred, oof_pred = run_mlp_tf_logger(
+            train,
+            test,
+            train_targets,
+            features,
+            train_targets_nonscored,
+            logger=logger,
+            model_dir=model_dir,
+            seeds=seeds,
+            model_type=_model_type,
+            str_condition=_str_condition,
+            is_train=is_train,
+        )
+        test_preds.append(test_pred)
+        oof_preds.append(oof_pred)
+
+    for m_t in model_types:
+        _run_model(m_t, str_condition)
+    model_type = "-".join(model_types)
+    mean_oof = np.average(oof_preds, axis=0)
+    mean_oof = mean_oof / len(oof_preds)
+    log_loss = mean_log_loss_train_targets_oof(mean_oof)
+    log_loss = round(log_loss, 7)
+    logger.info(
+        f"model_type:{model_type}, oof:{str(log_loss)}, train_flag:{str_train_flag}"
+    )  # general.logに文字列書き込み
+    logger.result(
+        f"{model_type}\t{str_condition}:Mean blend\t{str(log_loss)}\t{str_train_flag}"
+    )  # result.logに文字列書き込み
+    mean_test = np.average(test_preds, axis=0)
+    mean_test = mean_test / len(test_preds)
+    os.makedirs(f"{model_dir}/mean", exist_ok=True)
+    sample_submission_pred = submission_post_process(
+        mean_test, out_csv=f"{model_dir}/mean/submission.csv"
+    )
+    # ------- Nelder-Mead で最適なブレンディングの重み見つける -------
+    print("running Nelder-Mead...")
+    _train_targets = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
+    _train_targets.drop(["sig_id"], inplace=True, axis=1)
+    best_weights = nelder_mead_weights(_train_targets.values, oof_preds)
+    wei_oof = None
+    for wei, pre in zip(best_weights, oof_preds):
+        if wei_oof is None:
+            wei_oof = wei * pre
+        else:
+            wei_oof += wei * pre
+    log_loss = mean_log_loss_train_targets_oof(wei_oof)
+    log_loss = round(log_loss, 7)
+    logger.info(
+        f"model_type:{model_type}, oof:{str(log_loss)}, train_flag:{str_train_flag}"
+    )  # general.logに文字列書き込み
+    logger.result(
+        f"{model_type}\t{str_condition}:Nelder-Mead blend\t{str(log_loss)}\t{str_train_flag}"
+    )  # result.logに文字列書き込み
+    wei_test = None
+    for wei, pre in zip(best_weights, test_preds):
+        if wei_test is None:
+            wei_test = wei * pre
+        else:
+            wei_test += wei * pre
+    os.makedirs(f"{model_dir}/nelder", exist_ok=True)
+    sample_submission_pred = submission_post_process(
+        wei_test, out_csv=f"{model_dir}/nelder/submission.csv"
+    )
+    # ----------------------------------------------------------------

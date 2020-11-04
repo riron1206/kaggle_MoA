@@ -6,11 +6,74 @@ import pandas as pd
 from tqdm import tqdm
 from sklearn.preprocessing import RobustScaler
 from sklearn.decomposition import PCA
+from sklearn.model_selection import KFold
 
 current_dir = pathlib.Path(__file__).resolve().parent
 sys.path.append(str(current_dir))
 
-from params import DATADIR
+from params import DATADIR, FOLDS, ITERATIVE_STRATIFICATION
+
+sys.path.append(ITERATIVE_STRATIFICATION)
+from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
+
+
+# ===================================================================================================
+# ----------------------------------------------- CV ------------------------------------------------
+# ===================================================================================================
+
+
+def drug_MultilabelStratifiedKFold(seed=None):
+    """薬物およびマルチラベル層別化コード
+    https://www.kaggle.com/c/lish-moa/discussion/195195
+    - 薬物のみを層別化したい場合は MultilabelStratifiedKFold を KFold に変更したらいいみたい
+    Usage:
+        scored = drug_MultilabelStratifiedKFold()
+        for fold in tqdm(range(FOLDS)):
+            val_ind = scored[scored["fold"] == fold].index
+            trn_ind = scored[scored["fold"] != fold].index
+    """
+    # LOAD FILES
+    scored = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
+    drug = pd.read_csv(f"{DATADIR}/train_drug.csv")
+
+    targets = scored.columns[1:]
+    scored = scored.merge(drug, on="sig_id", how="left")
+
+    # LOCATE DRUGS 数が少ない薬(18行以下)は分ける
+    vc = scored.drug_id.value_counts()
+    vc1 = vc.loc[vc <= 18].index
+    vc2 = vc.loc[vc > 18].index
+
+    # STRATIFY DRUGS 18X OR LESS 数が少ない薬(18行以下)をcvに分ける
+    dct1 = {}
+    dct2 = {}
+    if seed is None:
+        skf = MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False)
+    else:
+        skf = MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=True, random_state=seed)
+    tmp = scored.groupby("drug_id")[targets].mean().loc[vc1]
+    for fold, (idxT, idxV) in enumerate(skf.split(tmp, tmp[targets])):
+        dd = {k: fold for k in tmp.index[idxV].values}
+        dct1.update(dd)
+
+    # STRATIFY DRUGS MORE THAN 18X 数が多い薬(18行以上)をcvに分ける
+    if seed is None:
+        skf = MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False)
+    else:
+        skf = MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=True, random_state=seed)
+    tmp = scored.loc[scored.drug_id.isin(vc2)].reset_index(drop=True)
+    for fold, (idxT, idxV) in enumerate(skf.split(tmp, tmp[targets])):
+        dd = {k: fold for k in tmp.sig_id[idxV].values}
+        dct2.update(dd)
+
+    # ASSIGN FOLDS
+    scored["fold"] = scored.drug_id.map(dct1)
+    scored.loc[scored.fold.isna(), "fold"] = scored.loc[
+        scored.fold.isna(), "sig_id"
+    ].map(dct2)
+    scored.fold = scored.fold.astype("int8")
+    return scored
+
 
 # ===================================================================================================
 # ---------------------------------------------- Data -----------------------------------------------
@@ -23,7 +86,15 @@ def load_orig_data():
     train_targets_nonscored = pd.read_csv(f"{DATADIR}/train_targets_nonscored.csv")
     test = pd.read_csv(f"{DATADIR}/test_features.csv")
     sample_submission = pd.read_csv(f"{DATADIR}/sample_submission.csv")
-    return train, train_targets, test, sample_submission, train_targets_nonscored
+    train_drug = pd.read_csv(f"{DATADIR}/train_drug.csv")
+    return (
+        train,
+        train_targets,
+        test,
+        sample_submission,
+        train_targets_nonscored,
+        train_drug,
+    )
 
 
 def mapping_and_filter(

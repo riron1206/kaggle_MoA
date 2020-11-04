@@ -1,22 +1,4 @@
-import warnings
-
-warnings.filterwarnings("ignore")
-
-import sys
-
-# sys.path.append('../input/iterative-stratification/iterative-stratification-master')
-sys.path.append(r"C:\Users\81908\Git\iterative-stratification")
-from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
-
 import os
-import gc
-import random
-import datetime
-import numpy as np
-import pandas as pd
-from tqdm.notebook import tqdm
-from time import time
-import optuna
 
 # tfの警告出さないようにする
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"  # なぜか効かない
@@ -26,12 +8,6 @@ import tensorflow_addons as tfa
 print("Tensorflow version " + tf.__version__)
 AUTO = tf.data.experimental.AUTOTUNE
 
-# + execution={"iopub.execute_input": "2020-10-30T05:56:28.941341Z", "iopub.status.busy": "2020-10-30T05:56:28.940584Z", "iopub.status.idle": "2020-10-30T05:56:28.943757Z", "shell.execute_reply": "2020-10-30T05:56:28.943280Z"} papermill={"duration": 0.02499, "end_time": "2020-10-30T05:56:28.943850", "exception": false, "start_time": "2020-10-30T05:56:28.918860", "status": "completed"} tags=[]
-OUTDIR = "output"
-os.makedirs(f"{OUTDIR}/model", exist_ok=True)
-LOG_PATH = f"{OUTDIR}/train_result.log"
-
-MODEL = "TabNet"
 
 # ===================================================================================================
 # ---------------------------------------------- TabNet ---------------------------------------------
@@ -1381,122 +1357,3 @@ class StackedTabNetRegressor(tf.keras.Model):
         self.activations = self.tabnet(inputs, training=training)
         out = self.regressor(self.activations)
         return outl
-
-
-# ===================================================================================================
-# ---------------------------------------------------------------------------------------------------
-# ===================================================================================================
-
-
-def create_model_tabnet(params=None, is_SWA=False, is_Lookahead=False):
-    if params is None:
-        model = StackedTabNetClassifier(
-            feature_columns=None,
-            num_classes=206,
-            num_layers=2,
-            feature_dim=128,
-            output_dim=64,
-            # num_features = len(top_feats),
-            num_features=len(top_feats_cols),
-            num_decision_steps=1,
-            relaxation_factor=1.5,
-            sparsity_coefficient=1e-5,
-            batch_momentum=0.98,
-            virtual_batch_size=None,
-            norm_type="group",
-            num_groups=-1,
-            multi_label=True,
-        )
-    else:
-        model = StackedTabNetClassifier(**params)
-
-    opt = tf.optimizers.Adam(LR)
-    # opt = tfa.optimizers.Lookahead(opt, sync_period=10)
-    opt = tfa.optimizers.SWA(opt)
-    model.compile(
-        optimizer=opt,
-        loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.001),
-        metrics=tf.keras.metrics.BinaryCrossentropy(),
-    )
-    return model
-
-
-def objective(trial):
-    params = dict(
-        multi_label=True,
-        feature_columns=None,  # データセットのTensorflow特徴列
-        num_features=len(top_feats_cols),  # 特徴量の数
-        num_classes=train_targets.shape[1],  # クラス数
-        virtual_batch_size=None,  # 仮想バッチサイズ。全体のバッチサイズは virtual_batch_size の整数倍じゃないとだめらしい
-        batch_momentum=0.98,  # 仮想バッチのMomentum。よくわからん
-        num_layers=trial.suggest_int("num_layers", 1, 5),  # 重ねるTabNetsの数
-        norm_type=trial.suggest_categorical("norm_type", ["group", "batch"]),  # 正規化のタイプ
-        num_groups=-1,  # group normarizaionのグループの数。よくわからん
-        num_decision_steps=trial.suggest_categorical(
-            "Nsteps", [3, 4, 5, 6, 7, 8, 9, 10]
-        ),  # 論文の探索範囲。decision stepsの数
-        relaxation_factor=trial.suggest_categorical(
-            "gamma", [1.0, 1.2, 1.5, 2.0]
-        ),  # 論文の探索範囲
-        sparsity_coefficient=trial.suggest_categorical(
-            "lambda_sparse", [0, 0.000001, 0.0001, 0.001, 0.01, 0.1]
-        ),  # 論文の探索範囲。sparsity正則化
-    )
-    # feature_dim must be larger than output dim
-    # feature_dim must be a list of length `num_layers`
-    params["feature_dim"] = trial.suggest_categorical(
-        "Na", [8, 16, 24, 32, 64, 128]
-    )  # feature transformation block
-    params["output_dim"] = int(
-        trial.suggest_uniform(
-            "Nd", params["feature_dim"] // 8, params["feature_dim"] // 2
-        )
-    )  # decision step
-
-    res, ss = run_model(params, MODEL=MODEL)
-    oof_score = log_loss_metric(train_targets.values, res.values)
-    return oof_score
-
-
-if __name__ == "__main__":
-    if MODE == "train":
-        with open(LOG_PATH, mode="w") as f:
-            f.write(
-                f"### train start {str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))} ###\n"
-            )
-            f.write(f"LR={LR}, EPOCHS={EPOCHS}, BATCH_SIZE={BATCH_SIZE}\n")
-
-        # tain
-        res, ss = run_model(MODEL=MODEL)
-
-        # oof
-        _str_oof = f"\n{MODEL} OOF Metric: {str(round(log_loss_metric(train_targets.values, res.values), 7))}"
-        print(_str_oof)
-
-        # oofのctl行の予測を0にする場合
-        res.loc[train["cp_type"] == 1, train_targets.columns] = 0
-        _str_oof_postprocess = f"\n{MODEL} OOF Metric with postprocessing: {str(round(log_loss_metric(train_targets.values, res.values), 7))}"
-        print(_str_oof_postprocess)
-
-        with open(LOG_PATH, mode="a") as f:
-            f.write(_str_oof)
-            f.write(_str_oof_postprocess)
-            f.write(
-                f"\n\n### train end {str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))} ###\n\n"
-            )
-    else:
-        study = optuna.create_study(
-            study_name=f"study",
-            storage=f"sqlite:///{OUTDIR}/study.db",
-            load_if_exists=True,
-            direction="minimize",
-            sampler=optuna.samplers.TPESampler(seed=1),
-            pruner=optuna.pruners.MedianPruner(
-                n_startup_trials=5, n_warmup_steps=30, interval_steps=10
-            ),
-        )
-        study.optimize(objective, n_trials=N_TRIALS)
-        study.trials_dataframe().to_csv(f"{OUTDIR}/objective_history.csv", index=False)
-        with open(f"{OUTDIR}/objective_best_params.txt", mode="w") as f:
-            f.write(str(study.best_params))
-        print(f"\nstudy.best_params:\n{study.best_params}")
