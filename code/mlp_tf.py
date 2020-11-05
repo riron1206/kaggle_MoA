@@ -861,23 +861,23 @@ def create_model_2l(shape, n_class=206):
 def create_model_stack_tabnet(
     shape, n_class=206, params=None, is_SWA=False, is_Lookahead=False, is_adabelief=True
 ):
-    params = dict(
-        feature_columns=None,
-        num_classes=n_class,
-        # num_layers=2,
-        #        feature_dim=32,
-        #        output_dim=32,
-        num_features=shape,
-        # num_decision_steps=2,
-        #        relaxation_factor=1.3,
-        #        sparsity_coefficient=0.0,
-        #        batch_momentum=0.98,
-        #        virtual_batch_size=24,
-        #        norm_type="group",
-        num_groups=-1,
-        multi_label=True,
-    )
-    print(params)
+    #    params = dict(
+    #        feature_columns=None,
+    #        num_classes=n_class,
+    #        # num_layers=2,
+    #        #        feature_dim=32,
+    #        #        output_dim=32,
+    #        num_features=shape,
+    #        # num_decision_steps=2,
+    #        #        relaxation_factor=1.3,
+    #        #        sparsity_coefficient=0.0,
+    #        #        batch_momentum=0.98,
+    #        #        virtual_batch_size=24,
+    #        #        norm_type="group",
+    #        num_groups=-1,
+    #        multi_label=True,
+    #    )
+    print("params:", params)
     if params is None:
         model = tabnet_tf.StackedTabNetClassifier(
             feature_columns=None,
@@ -916,6 +916,7 @@ def create_model_stack_tabnet(
 def create_model_tabnet_class(
     shape, n_class=206, params=None, is_SWA=False, is_Lookahead=False, is_adabelief=True
 ):
+    print("params:", params)
     if params is None:
         model = tabnet_tf.TabNetClassifier(
             feature_columns=None,
@@ -965,6 +966,7 @@ def train_and_evaluate(
     seeds=[123],
     model_type="3l",
     model_dir="mlp_tf",
+    tabnet_params=None,
 ):
     """モデル作成"""
     print(f"fold:{FOLDS}, epochs:{EPOCHS}, batch_size:{BATCH_SIZE}, LR:{LR}")
@@ -1030,11 +1032,11 @@ def train_and_evaluate(
                 model = create_model_lr(len(features), n_class=train_targets.shape[1])
             elif model_type == "stack_tabnet":
                 model = create_model_stack_tabnet(
-                    len(features), n_class=train_targets.shape[1]
+                    len(features), n_class=train_targets.shape[1], params=tabnet_params,
                 )
             elif model_type == "tabnet_class":
                 model = create_model_tabnet_class(
-                    len(features), n_class=train_targets.shape[1]
+                    len(features), n_class=train_targets.shape[1], params=tabnet_params,
                 )
             model_path = f"{model_dir}/{model_type}_{fold}_{seed}.h5"
 
@@ -1162,6 +1164,7 @@ def inference(
     seeds=[123],
     model_type="3l",
     model_dir="mlp_tf",
+    tabnet_params=None,
 ):
     """推論用"""
     test_pred_seed = []
@@ -1229,7 +1232,7 @@ def inference(
                 model = create_model_lr(len(features), n_class=train_targets.shape[1])
             elif model_type == "stack_tabnet":
                 model = create_model_stack_tabnet(
-                    len(features), n_class=train_targets.shape[1]
+                    len(features), n_class=train_targets.shape[1], params=tabnet_params,
                 )
                 # tabnetはサブクラスモデルなのでfit しないとロードできないため、1エポックだけ実行
                 model.fit(
@@ -1242,7 +1245,7 @@ def inference(
                 )
             elif model_type == "tabnet_class":
                 model = create_model_tabnet_class(
-                    len(features), n_class=train_targets.shape[1]
+                    len(features), n_class=train_targets.shape[1], params=tabnet_params,
                 )
                 # tabnetはサブクラスモデルなのでfit しないとロードできないため、1エポックだけ実行
                 model.fit(
@@ -1344,6 +1347,7 @@ def run_mlp_tf_logger(
     str_condition="",
     p_min=1e-15,
     is_train=True,
+    tabnet_params=None,
 ):
     """モデル作成/推論してログファイルに結果書き込む"""
     str_train_flag = "train" if is_train else "inference"
@@ -1358,6 +1362,7 @@ def run_mlp_tf_logger(
             seeds=seeds,
             model_type=model_type,
             model_dir=model_dir,
+            tabnet_params=tabnet_params,
         )
     else:
         # inference
@@ -1370,6 +1375,7 @@ def run_mlp_tf_logger(
             seeds=seeds,
             model_type=model_type,
             model_dir=model_dir,
+            tabnet_params=tabnet_params,
         )
     oof_log_loss = get_oof_score(
         oof_pred, train_targets, train_targets_nonscored, p_min=p_min
