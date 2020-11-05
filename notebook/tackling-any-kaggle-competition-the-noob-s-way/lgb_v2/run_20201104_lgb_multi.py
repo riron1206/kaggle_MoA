@@ -421,8 +421,8 @@ def run_multiout(params, seed):
     # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
     # for fold_id, (train_index, valid_index) in tqdm(enumerate(MultilabelStratifiedKFold(n_splits=N_SPLITS, shuffle=False).split(y_train, y_train))):
     # 薬物およびマルチラベル層別化 20201104
-    # scored = drug_MultilabelStratifiedKFold(seed=seed) # MultilabelStratifiedKFoldの乱数指定
-    scored = drug_MultilabelStratifiedKFold()  # MultilabelStratifiedKFoldの乱数固定
+    scored = drug_MultilabelStratifiedKFold(seed=seed)  # MultilabelStratifiedKFoldの乱数指定
+    # scored = drug_MultilabelStratifiedKFold()  # MultilabelStratifiedKFoldの乱数固定
     for fold_id in tqdm(range(N_SPLITS)):
         valid_index = scored[scored["fold"] == fold_id].index
         train_index = scored[scored["fold"] != fold_id].index
@@ -457,14 +457,10 @@ def run_multiout(params, seed):
                 model = ClassifierChain(
                     LGBMClassifier(**params), order="random", random_state=seed
                 )
-            model_path = (
-                f"{OUTDIR}/model/chain/fold{str(fold_id).zfill(2)}_{seed}.model"
-            )
+            model_path = f"{OUTDIR}/model/fold{str(fold_id).zfill(2)}_{seed}.model"
         else:
             model = MultiOutputClassifier(LGBMClassifier(**params))
-            model_path = (
-                f"{OUTDIR}/model/multi/fold{str(fold_id).zfill(2)}_{seed}.model"
-            )
+            model_path = f"{OUTDIR}/model/fold{str(fold_id).zfill(2)}_{seed}.model"
 
         # MultiOutputClassifier/ClassifierChain はval使えないみたい
         # https://scikit-learn.org/stable/modules/generated/sklearn.multioutput.MultiOutputClassifier.html

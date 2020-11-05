@@ -3,7 +3,17 @@ import datetime
 import logging
 import os
 import pathlib
+import joblib
 import numpy as np
+
+
+def load_model(model_path="model/fold00.model"):
+    return joblib.load(model_path)
+
+
+def save_model(model, model_path="model/fold00.model"):
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+    joblib.dump(model, model_path, compress=True)
 
 
 class Logger:

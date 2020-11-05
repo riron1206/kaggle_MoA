@@ -15,7 +15,7 @@ ADABELIEF_TF = r"C:\Users\81908\Git\Adabelief-Optimizer\pypi_packages\adabelief_
 FOLDS = 5  # cvの数 5で固定
 
 # MLPのパラメータ
-EPOCHS = 30
+EPOCHS = 80
 BATCH_SIZE = 128
 LR = 0.001
 VERBOSE = 0  # 0だと学習履歴出さない

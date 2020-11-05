@@ -22,7 +22,7 @@ from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
 # ===================================================================================================
 
 
-def drug_MultilabelStratifiedKFold(seed=None):
+def drug_MultilabelStratifiedKFold(folds=FOLDS, seed=None, scored=None):
     """薬物およびマルチラベル層別化コード
     https://www.kaggle.com/c/lish-moa/discussion/195195
     - 薬物のみを層別化したい場合は MultilabelStratifiedKFold を KFold に変更したらいいみたい
@@ -33,24 +33,24 @@ def drug_MultilabelStratifiedKFold(seed=None):
             trn_ind = scored[scored["fold"] != fold].index
     """
     # LOAD FILES
-    scored = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
     drug = pd.read_csv(f"{DATADIR}/train_drug.csv")
-
-    targets = scored.columns[1:]
+    if scored is None:
+        scored = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
+    targets = scored.drop(["sig_id"], axis=1).columns  # sig_id列以外がクラス列
     scored = scored.merge(drug, on="sig_id", how="left")
 
     # LOCATE DRUGS 数が少ない薬(18行以下)は分ける
     vc = scored.drug_id.value_counts()
-    vc1 = vc.loc[vc <= 18].index
-    vc2 = vc.loc[vc > 18].index
+    vc1 = vc.loc[vc <= 18].index.sort_values()
+    vc2 = vc.loc[vc > 18].index.sort_values()
 
     # STRATIFY DRUGS 18X OR LESS 数が少ない薬(18行以下)をcvに分ける
     dct1 = {}
     dct2 = {}
     if seed is None:
-        skf = MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False)
+        skf = MultilabelStratifiedKFold(n_splits=folds, shuffle=False)
     else:
-        skf = MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=True, random_state=seed)
+        skf = MultilabelStratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
     tmp = scored.groupby("drug_id")[targets].mean().loc[vc1]
     for fold, (idxT, idxV) in enumerate(skf.split(tmp, tmp[targets])):
         dd = {k: fold for k in tmp.index[idxV].values}
@@ -58,9 +58,9 @@ def drug_MultilabelStratifiedKFold(seed=None):
 
     # STRATIFY DRUGS MORE THAN 18X 数が多い薬(18行以上)をcvに分ける
     if seed is None:
-        skf = MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False)
+        skf = MultilabelStratifiedKFold(n_splits=folds, shuffle=False)
     else:
-        skf = MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=True, random_state=seed)
+        skf = MultilabelStratifiedKFold(n_splits=folds, shuffle=True, random_state=seed)
     tmp = scored.loc[scored.drug_id.isin(vc2)].reset_index(drop=True)
     for fold, (idxT, idxV) in enumerate(skf.split(tmp, tmp[targets])):
         dd = {k: fold for k in tmp.sig_id[idxV].values}
@@ -104,6 +104,7 @@ def mapping_and_filter(
     train_targets_nonscored,
     is_del_ctl=False,
     is_conat_nonscore=False,
+    is_del_noise_drug=False,
 ):
     """前処理"""
     cp_type = {"trt_cp": 0, "ctl_vehicle": 1}
@@ -116,11 +117,26 @@ def mapping_and_filter(
     if is_del_ctl:
         # ctl_vehicleは必ず0なので学習データから除く
         train_targets = train_targets[train["cp_type"] == 0].reset_index(drop=True)
+        train_targets_nonscored = train_targets_nonscored[
+            train["cp_type"] == 0
+        ].reset_index(drop=True)
         train = train[train["cp_type"] == 0].reset_index(drop=True)
 
-    # sig_id列はidなので不要
-    train_targets.drop(["sig_id"], inplace=True, axis=1)
-    train_targets_nonscored.drop(["sig_id"], inplace=True, axis=1)
+    # 同じ用量と時間ですが、遺伝子と細胞のデータはすべて著しく異なる行削除 20201105
+    # https://www.kaggle.com/c/lish-moa/discussion/195245
+    if is_del_noise_drug:
+        train_drug = pd.read_csv(f"{DATADIR}/train_drug.csv")
+        for d_id in ["87d714366"]:
+            train = train[train_drug["drug_id"] != d_id].reset_index(drop=True)
+            train_targets = train_targets[train_drug["drug_id"] != d_id].reset_index(
+                drop=True
+            )
+            train_targets_nonscored = train_targets_nonscored[
+                train_drug["drug_id"] != d_id
+            ].reset_index(drop=True)
+
+    # train_targets.drop(["sig_id"], inplace=True, axis=1)  # drug_MultilabelStratifiedKFold で使うからsig_id列残す
+    train_targets_nonscored.drop(["sig_id"], inplace=True, axis=1)  # sig_id列はidなので不要
 
     # nonscored と連結
     if is_conat_nonscore:
@@ -228,6 +244,37 @@ def fe_pca(
     )
 
     return train, test, get_features(train)
+
+
+def fe_clipping(
+    train, test, features_g=None, features_c=None, min_clip=0.01, max_clip=0.99,
+):
+    """外れ値の特徴量クリップ"""
+    # g-,c-単位で実行
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
+
+    def _clipping(
+        train, test, features, min_clip, max_clip,
+    ):
+        train_ = train[features].copy()
+        test_ = test[features].copy()
+        df = pd.concat([train_, test_], axis=0)
+
+        p_min = np.quantile(df.loc[:, features], min_clip)
+        p_max = np.quantile(df.loc[:, features], max_clip)
+        print(f"{min_clip * 100} / {max_clip * 100} % clip : {p_min} / {p_max}")
+        # 1％点以下の値は1％点に、99％点以上の値は99％点にclippingする
+        df[features] = df[features].clip(p_min, p_max, axis=1)
+
+        train[features] = df.iloc[: train.shape[0]]
+        test[features] = df.iloc[train.shape[0] :].reset_index(drop=True)
+        return train, test
+
+    train, test = _clipping(train, test, features_g, min_clip, max_clip)
+    train, test = _clipping(train, test, features_c, min_clip, max_clip)
+
+    return train, test
 
 
 def fe_stats(

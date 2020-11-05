@@ -557,7 +557,31 @@ def mean_log_loss_train_targets_oof(y_pred, p_min=1e-15):
     # mean_log_loss計算用に再ロード
     _train_targets = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
     _train_targets.drop(["sig_id"], inplace=True, axis=1)
+
+    # oofのctl行の予測を0にする
+    _train = pd.read_csv(f"{DATADIR}/train_features.csv")
+    y_pred[_train["cp_type"] == 1, :] = 0
+
     return mean_log_loss(_train_targets.values, y_pred, n_class=206, p_min=p_min)
+
+
+def get_oof_score(oof_pred, train_targets, train_targets_nonscored, p_min=1e-15):
+    """oofのloss計算。列増えた時や行減った時での条件分岐あり"""
+    # sig_id列残っているはずなので消す
+    if "sig_id" in train_targets.columns:
+        train_targets = train_targets.drop(["sig_id"], axis=1)
+
+    if train_targets.shape[0] == 23814:
+        oof_score = mean_log_loss_train_targets_oof(oof_pred, p_min=p_min)
+    elif train_targets.shape[1] > 206:
+        oof_score = mean_log_loss(
+            train_targets.iloc[:, train_targets_nonscored.shape[1] :].values,
+            oof_pred,
+            p_min=1e-15,
+        )
+    else:
+        oof_score = mean_log_loss(train_targets.values, oof_pred, p_min=1e-15)
+    return oof_score
 
 
 def clip_logloss(y_true, y_pred):
@@ -668,7 +692,7 @@ def create_model_rs(shape1, shape2, n_class=206):
         loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.0015),  # ラベルスムージング
         metrics=tf.keras.metrics.BinaryCrossentropy(),
     )
-    model.save("model/rs_shape.h5")
+    # model.save("model/rs_shape.h5")
     return model
 
 
@@ -834,7 +858,7 @@ def create_model_2l(shape, n_class=206):
     return model
 
 
-def create_model_tabnet(
+def create_model_stack_tabnet(
     shape, n_class=206, params=None, is_SWA=False, is_Lookahead=False, is_adabelief=True
 ):
     params = dict(
@@ -889,6 +913,43 @@ def create_model_tabnet(
     return model
 
 
+def create_model_tabnet_class(
+    shape, n_class=206, params=None, is_SWA=False, is_Lookahead=False, is_adabelief=True
+):
+    if params is None:
+        model = tabnet_tf.TabNetClassifier(
+            feature_columns=None,
+            num_classes=n_class,
+            feature_dim=128,
+            output_dim=64,
+            num_features=shape,
+            num_decision_steps=1,
+            relaxation_factor=1.5,
+            sparsity_coefficient=1e-5,
+            batch_momentum=0.98,
+            virtual_batch_size=None,
+            norm_type="group",
+            num_groups=-1,
+            multi_label=True,
+        )
+    else:
+        model = tabnet_tf.TabNetClassifier(**params)
+    if is_adabelief:
+        opt = AdaBeliefOptimizer(learning_rate=LR)
+    else:
+        opt = tf.optimizers.Adam(LR)
+    if is_SWA:
+        opt = tfa.optimizers.Lookahead(opt, sync_period=10)
+    if is_Lookahead:
+        opt = tfa.optimizers.SWA(opt)
+    model.compile(
+        optimizer=opt,
+        loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.001),
+        metrics=tf.keras.metrics.BinaryCrossentropy(),
+    )
+    return model
+
+
 # ===================================================================================================
 # ------------------------------------------ Train/Prewdict -----------------------------------------
 # ===================================================================================================
@@ -897,9 +958,9 @@ def create_model_tabnet(
 def train_and_evaluate(
     train,
     test,
-    train_targets,
+    train_targets,  # sig_id列必要
     features,
-    train_targets_nonscored,
+    train_targets_nonscored,  # sig_id列消しておくこと
     start_predictors=start_predictors,
     seeds=[123],
     model_type="3l",
@@ -916,7 +977,9 @@ def train_and_evaluate(
         seed_everything(seed)
 
         print(f"Using model {model_type} with seed {seed} for train_and_evaluate")
-        print(f"Trained with {len(features)} features")
+        print(
+            f"Trained with {len(features)} features. train.shape: {train.shape}. train_targets.shape: {train_targets.shape}"
+        )
 
         oof_pred = np.zeros((train.shape[0], 206))
         test_pred = np.zeros((test.shape[0], 206))
@@ -931,11 +994,18 @@ def train_and_evaluate(
         # # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
         # for fold, (trn_ind, val_ind) in tqdm(enumerate(MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False).split(train_targets, train_targets))):
         # 薬物およびマルチラベル層別化 20201104
-        # scored = drug_MultilabelStratifiedKFold(seed=seed) # MultilabelStratifiedKFoldの乱数指定
-        scored = drug_MultilabelStratifiedKFold()  # MultilabelStratifiedKFoldの乱数固定
+        # scored = drug_MultilabelStratifiedKFold(seed=seed, scored=train_targets,)  # MultilabelStratifiedKFoldの乱数指定
+        scored = drug_MultilabelStratifiedKFold(
+            scored=train_targets,
+        )  # MultilabelStratifiedKFoldの乱数固定
         for fold in tqdm(range(FOLDS)):
             val_ind = scored[scored["fold"] == fold].index
             trn_ind = scored[scored["fold"] != fold].index
+
+            # sig_id列残っているはずなので消す
+            if "sig_id" in train_targets.columns:
+                train_targets = train_targets.drop(["sig_id"], axis=1)
+                # train_targets.drop(["sig_id"], inplace=True, axis=1)
 
             K.clear_session()
             if model_type == "5l":
@@ -958,8 +1028,12 @@ def train_and_evaluate(
                 model = create_model_3lWN(len(features), n_class=train_targets.shape[1])
             elif model_type == "lr":
                 model = create_model_lr(len(features), n_class=train_targets.shape[1])
-            elif model_type == "tabnet":
-                model = create_model_tabnet(
+            elif model_type == "stack_tabnet":
+                model = create_model_stack_tabnet(
+                    len(features), n_class=train_targets.shape[1]
+                )
+            elif model_type == "tabnet_class":
+                model = create_model_tabnet_class(
                     len(features), n_class=train_targets.shape[1]
                 )
             model_path = f"{model_dir}/{model_type}_{fold}_{seed}.h5"
@@ -1049,6 +1123,9 @@ def train_and_evaluate(
                 # targetの列だけにする
                 y_pred_val = y_pred_val[:, train_targets_nonscored.shape[1] :]
                 y_pred_test = y_pred_test[:, train_targets_nonscored.shape[1] :]
+                assert (
+                    y_pred_val.shape[1] == 206
+                ), f"予測値が206列でないのでnonscored残ってる。shape:{y_pred_val.shape[1]} 。"
 
             oof_pred[val_ind] = y_pred_val
             test_pred += y_pred_test
@@ -1056,7 +1133,7 @@ def train_and_evaluate(
             del model
             gc.collect()
 
-        oof_score = mean_log_loss_train_targets_oof(oof_pred)
+        oof_score = get_oof_score(oof_pred, train_targets, train_targets_nonscored)
         print(f"Our out of folds mean log loss score is {oof_score}")
 
         test_pred_seed.append(test_pred)
@@ -1065,7 +1142,7 @@ def train_and_evaluate(
     test_pred_avg = np.average(test_pred_seed, axis=0)
     oof_pred_avg = np.average(oof_pred_seed, axis=0)
 
-    seed_log_loss = mean_log_loss_train_targets_oof(oof_pred_avg)
+    seed_log_loss = get_oof_score(oof_pred_avg, train_targets, train_targets_nonscored)
     print(f"Our out of folds log loss for our seed blend model is {seed_log_loss}")
 
     sample_submission_pred = submission_post_process(
@@ -1078,9 +1155,9 @@ def train_and_evaluate(
 def inference(
     train,
     test,
-    train_targets,
+    train_targets,  # sig_id列必要
     features,
-    train_targets_nonscored,
+    train_targets_nonscored,  # sig_id列消しておくこと
     start_predictors=start_predictors,
     seeds=[123],
     model_type="3l",
@@ -1107,11 +1184,18 @@ def inference(
         # # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
         # for fold, (trn_ind, val_ind) in tqdm(enumerate(MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False).split(train_targets, train_targets))):
         # 薬物およびマルチラベル層別化 20201104
-        # scored = drug_MultilabelStratifiedKFold(seed=seed) # MultilabelStratifiedKFoldの乱数指定
-        scored = drug_MultilabelStratifiedKFold()  # MultilabelStratifiedKFoldの乱数固定
+        # scored = drug_MultilabelStratifiedKFold(seed=seed, scored=train_targets,)  # MultilabelStratifiedKFoldの乱数指定
+        scored = drug_MultilabelStratifiedKFold(
+            scored=train_targets
+        )  # MultilabelStratifiedKFoldの乱数固定
         for fold in tqdm(range(FOLDS)):
             val_ind = scored[scored["fold"] == fold].index
             trn_ind = scored[scored["fold"] != fold].index
+
+            # sig_id列残っているはずなので消す
+            if "sig_id" in train_targets.columns:
+                train_targets = train_targets.drop(["sig_id"], axis=1)
+                # train_targets.drop(["sig_id"], inplace=True, axis=1)
 
             K.clear_session()
             x_train, x_val = (
@@ -1143,8 +1227,21 @@ def inference(
                 model = create_model_3lWN(len(features), n_class=train_targets.shape[1])
             elif model_type == "lr":
                 model = create_model_lr(len(features), n_class=train_targets.shape[1])
-            elif model_type == "tabnet":
-                model = create_model_tabnet(
+            elif model_type == "stack_tabnet":
+                model = create_model_stack_tabnet(
+                    len(features), n_class=train_targets.shape[1]
+                )
+                # tabnetはサブクラスモデルなのでfit しないとロードできないため、1エポックだけ実行
+                model.fit(
+                    x_train,
+                    y_train,
+                    validation_data=(x_val, y_val),
+                    epochs=1,
+                    batch_size=BATCH_SIZE,
+                    verbose=VERBOSE,
+                )
+            elif model_type == "tabnet_class":
+                model = create_model_tabnet_class(
                     len(features), n_class=train_targets.shape[1]
                 )
                 # tabnetはサブクラスモデルなのでfit しないとロードできないため、1エポックだけ実行
@@ -1178,6 +1275,9 @@ def inference(
                 # targetの列だけにする
                 y_pred_val = y_pred_val[:, train_targets_nonscored.shape[1] :]
                 y_pred_test = y_pred_test[:, train_targets_nonscored.shape[1] :]
+                assert (
+                    y_pred_val.shape[1] == 206
+                ), f"予測値が206列でないのでnonscored残ってる。shape:{y_pred_val.shape[1]} 。"
 
             oof_pred[val_ind] = y_pred_val
             test_pred += y_pred_test
@@ -1185,7 +1285,7 @@ def inference(
             del model
             gc.collect()
 
-        oof_score = mean_log_loss_train_targets_oof(oof_pred)
+        oof_score = get_oof_score(oof_pred, train_targets, train_targets_nonscored)
         print(f"Our out of folds mean log loss score is {oof_score}")
 
         test_pred_seed.append(test_pred)
@@ -1194,11 +1294,11 @@ def inference(
     test_pred_avg = np.average(test_pred_seed, axis=0)
     oof_pred_avg = np.average(oof_pred_seed, axis=0)
 
-    seed_log_loss = mean_log_loss_train_targets_oof(oof_pred_avg)
+    seed_log_loss = get_oof_score(oof_pred_avg, train_targets, train_targets_nonscored)
     print(f"Our out of folds log loss for our seed blend model is {seed_log_loss}")
 
     sample_submission_pred = submission_post_process(
-        test_pred_avg, out_csv=f"{model_dir}/submission.csv"
+        test_pred_avg, out_csv=f"submission.csv"
     )
 
     return test_pred_avg, oof_pred_avg
@@ -1271,7 +1371,9 @@ def run_mlp_tf_logger(
             model_type=model_type,
             model_dir=model_dir,
         )
-    oof_log_loss = mean_log_loss_train_targets_oof(oof_pred, p_min=p_min)
+    oof_log_loss = get_oof_score(
+        oof_pred, train_targets, train_targets_nonscored, p_min=p_min
+    )
     oof_log_loss = round(oof_log_loss, 7)
     logger.info(
         f"model_type:{model_type}, oof:{str(oof_log_loss)}, train_flag:{str_train_flag}"
@@ -1292,8 +1394,20 @@ def run_mlp_tf_blend_logger(
     model_dir="mlp_tf",
     seeds=[123],
     str_condition="",
-    model_types=["lr", "2l", "3l", "4l", "5l", "3l_v2", "3lWN", "tabnet"],
+    model_types=[
+        "lr",
+        "2l",
+        "3l",
+        "4l",
+        "5l",
+        "rs",
+        "3l_v2",
+        "3lWN",
+        "stack_tabnet",
+        "tabnet_class",
+    ],
     is_train=True,
+    is_nelder=False,
 ):
     """モデルブレンディングしてログファイルに結果書き込む"""
     str_train_flag = "train" if is_train else "inference"
@@ -1322,7 +1436,7 @@ def run_mlp_tf_blend_logger(
     model_type = "-".join(model_types)
     mean_oof = np.average(oof_preds, axis=0)
     mean_oof = mean_oof / len(oof_preds)
-    log_loss = mean_log_loss_train_targets_oof(mean_oof)
+    log_loss = get_oof_score(mean_oof, train_targets, train_targets_nonscored)
     log_loss = round(log_loss, 7)
     logger.info(
         f"model_type:{model_type}, oof:{str(log_loss)}, train_flag:{str_train_flag}"
@@ -1332,37 +1446,39 @@ def run_mlp_tf_blend_logger(
     )  # result.logに文字列書き込み
     mean_test = np.average(test_preds, axis=0)
     mean_test = mean_test / len(test_preds)
-    os.makedirs(f"{model_dir}/mean", exist_ok=True)
+    os.makedirs(f"mean", exist_ok=True)
     sample_submission_pred = submission_post_process(
-        mean_test, out_csv=f"{model_dir}/mean/submission.csv"
+        mean_test, out_csv=f"mean/submission.csv"
     )
-    # ------- Nelder-Mead で最適なブレンディングの重み見つける -------
-    print("running Nelder-Mead...")
-    _train_targets = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
-    _train_targets.drop(["sig_id"], inplace=True, axis=1)
-    best_weights = nelder_mead_weights(_train_targets.values, oof_preds)
-    wei_oof = None
-    for wei, pre in zip(best_weights, oof_preds):
-        if wei_oof is None:
-            wei_oof = wei * pre
-        else:
-            wei_oof += wei * pre
-    log_loss = mean_log_loss_train_targets_oof(wei_oof)
-    log_loss = round(log_loss, 7)
-    logger.info(
-        f"model_type:{model_type}, oof:{str(log_loss)}, train_flag:{str_train_flag}"
-    )  # general.logに文字列書き込み
-    logger.result(
-        f"{model_type}\t{str_condition}:Nelder-Mead blend\t{str(log_loss)}\t{str_train_flag}"
-    )  # result.logに文字列書き込み
-    wei_test = None
-    for wei, pre in zip(best_weights, test_preds):
-        if wei_test is None:
-            wei_test = wei * pre
-        else:
-            wei_test += wei * pre
-    os.makedirs(f"{model_dir}/nelder", exist_ok=True)
-    sample_submission_pred = submission_post_process(
-        wei_test, out_csv=f"{model_dir}/nelder/submission.csv"
-    )
-    # ----------------------------------------------------------------
+    if is_nelder:
+        # 時間かかるから基本False
+        # ------- Nelder-Mead で最適なブレンディングの重み見つける -------
+        print("running Nelder-Mead...")
+        _train_targets = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
+        _train_targets.drop(["sig_id"], inplace=True, axis=1)
+        best_weights = nelder_mead_weights(_train_targets.values, oof_preds)
+        wei_oof = None
+        for wei, pre in zip(best_weights, oof_preds):
+            if wei_oof is None:
+                wei_oof = wei * pre
+            else:
+                wei_oof += wei * pre
+        log_loss = get_oof_score(wei_oof, train_targets, train_targets_nonscored)
+        log_loss = round(log_loss, 7)
+        logger.info(
+            f"model_type:{model_type}, oof:{str(log_loss)}, train_flag:{str_train_flag}"
+        )  # general.logに文字列書き込み
+        logger.result(
+            f"{model_type}\t{str_condition}:Nelder-Mead blend\t{str(log_loss)}\t{str_train_flag}"
+        )  # result.logに文字列書き込み
+        wei_test = None
+        for wei, pre in zip(best_weights, test_preds):
+            if wei_test is None:
+                wei_test = wei * pre
+            else:
+                wei_test += wei * pre
+        os.makedirs(f"nelder", exist_ok=True)
+        sample_submission_pred = submission_post_process(
+            wei_test, out_csv=f"nelder/submission.csv"
+        )
+        # ----------------------------------------------------------------
