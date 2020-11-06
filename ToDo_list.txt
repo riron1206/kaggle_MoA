@@ -29,6 +29,42 @@ https://www.kaggle.com/c/lish-moa/discussion/193532
 ----------------------------------------------------------------------------
 
 20201030
+◆今週試したこと
+・LightGBMのコード修正
+
+・3層のMLPでfeature engineering
+　- CV下がったの
+　　- 列の統計値
+　　- PCA+RobustScaler
+　　- c-列の2乗
+　　- c-列の絶対値
+　- 公開notebookでは効果出てるが、自分のCV効果なかったの
+　　- RankGauss
+　　- VarianceThreshold（分散がしきい値以下の特徴削除）
+　　- KMeansで特徴量作成
+　　- cp_type列削除
+　- 効果なし
+　　- g-列の2乗
+　　- g-列の二値化
+　　- g-列の絶対値
+　　- cp_type=ctl_vehicle 行の平均値との差、比率
+
+・モデルブレンディングの重みをネルダーミードで最適化
+CV下がるが、LB悪化
+
+・TGANあきらめた
+
+◆現在のスコア
+・LightGBM + feature engineering
+CV 0.01548 / LB  0.01987
+
+・MLPブレンディング + feature engineering
+CV 0.01519 / LB  0.01858
+
+◆疑問（困ってること）
+スコア良いpytorchの公開notebook(https://www.kaggle.com/kushal1506/moa-pytorch-feature-engineering-0-01846)
+のMLPをtensorflowで作り直したがうまくいかない
+
 ◆来週試したいこと
 ・MLPでスコア上げる
 	- パラメータチューニング
@@ -57,3 +93,65 @@ https://www.kaggle.com/c/lish-moa/discussion/193532
 	
 ・マルチラベルコンペの上位解法参考にする
 	-https://www.kaggle.com/c/lish-moa/discussion/180092
+
+----------------------------------------------------------------------------
+
+20201106
+◆今週試した上手くいったこと
+* feature engineering
+　g-,c-毎に5%,95%の値でクリップしたらCV 0.000001改善
+
+* nonscored target もクラスに追加した MLP
+　resnet構造のMLPでCV改善
+
+* adabelief-tf=0.1.0
+　CV改善。Lookaheadと組み合わせたらCV悪化（大堀さんが言った通り）
+
+◆今週試した上手くいかなかったこと
+* nonscored target もクラスに追加した MLP + scored targetのclass_weight大きくして学習
+　CV、LB 悪化
+
+* LightGBM + MultiOutputClassifier 
+　LightGBM206個作る方法よりCV、LB 悪化
+　
+* LightGBM + ClassifierChain
+　LightGBM206個作る方法よりCV、LB 悪化
+　LightGBM + MultiOutputClassifier よりはCV改善
+
+* nonscored target もクラスに追加した LightGBM + ClassifierChain 
+　LightGBM206個作る方法よりCV悪化
+　LightGBM + ClassifierChain よりはCV改善
+
+* tf版TabNet
+　MLPよりCV悪化
+
+◆来週試したいこと
+* drug_id利用したMultilabelStratifiedKFoldでモデル再作成
+* feature engineering
+　同じ用量時間だがg-,c-列の値が全然違うデータ削除など
+　https://www.kaggle.com/c/lish-moa/discussion/195245
+* tf版TabNetのパラメチューニング
+* 作成したモデルブレンディング
+
+◆現状の CV/LB スコア
+* tf版TabNet
+　CV: 0.01667 / LB: 出してない
+* MLPとLightGBM は前回から改善なし
+
+◆注目の notebook, discussion
+* https://www.kaggle.com/c/lish-moa/discussion/195378
+　余裕あればCNN試したい
+
+◆疑問（と困ってること）
+* クラス毎に blendingはどうやっている？
+　scipy.optimize.minimizeでやると時間かかりすぎて困ってる
+* tf版TabNetのCV上がらない
+* LB上がらない
+
+◆議題
+* drug_id利用したMultilabelStratifiedKFold 使うか？
+　https://www.kaggle.com/c/lish-moa/discussion/195195
+　CVとLBの差は狭まるがLB 悪化
+　わずかにCV 下げた(0.00002下げた)場合ではLB 改善しなかったので、このCVを完全に信じるのは危なそう
+
+
