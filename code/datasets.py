@@ -41,8 +41,12 @@ def drug_MultilabelStratifiedKFold(folds=FOLDS, seed=None, scored=None):
 
     # LOCATE DRUGS 数が少ない薬(18行以下)は分ける
     vc = scored.drug_id.value_counts()
-    vc1 = vc.loc[vc <= 18].index.sort_values()
-    vc2 = vc.loc[vc > 18].index.sort_values()
+    # vc1 = vc.loc[vc <= 18].index.sort_values()
+    # vc2 = vc.loc[vc > 18].index.sort_values()
+    # 6、12、または18回表示されない薬剤は、おそらくテストデータセットに表示されるためです。もしそうなら、私たちはその薬を層別化する必要はありません
+    # https://www.kaggle.com/c/lish-moa/discussion/195195
+    vc1 = vc.loc[(vc == 6) | (vc == 12) | (vc == 18)].index.sort_values()
+    vc2 = vc.loc[(vc != 6) & (vc != 12) & (vc != 18)].index.sort_values()
 
     # STRATIFY DRUGS 18X OR LESS 数が少ない薬(18行以下)をcvに分ける
     dct1 = {}
@@ -115,7 +119,8 @@ def mapping_and_filter(
 
     # 完全なoofにするためデータ抜くのやめる 20201028
     if is_del_ctl:
-        # ctl_vehicleは必ず0なので学習データから除く
+        # ctl_vehicleは必ず0なので学習データから除く 1866行削除
+        # drug_id = cacb2b860 の行と同じ
         train_targets = train_targets[train["cp_type"] == 0].reset_index(drop=True)
         train_targets_nonscored = train_targets_nonscored[
             train["cp_type"] == 0
@@ -126,6 +131,7 @@ def mapping_and_filter(
     # https://www.kaggle.com/c/lish-moa/discussion/195245
     if is_del_noise_drug:
         train_drug = pd.read_csv(f"{DATADIR}/train_drug.csv")
+        # 87d714366 は 718行削除
         for d_id in ["87d714366"]:
             train = train[train_drug["drug_id"] != d_id].reset_index(drop=True)
             train_targets = train_targets[train_drug["drug_id"] != d_id].reset_index(
@@ -277,6 +283,72 @@ def fe_clipping(
     return train, test
 
 
+def fe_clipping_col(
+    train, test, features_g=None, features_c=None, min_clip=0.01, max_clip=0.99,
+):
+    """各列単位で外れ値の特徴量クリップ"""
+    # g-,c-単位で実行
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
+
+    def _clipping(
+        train, test, features, min_clip, max_clip,
+    ):
+        train_ = train[features].copy()
+        test_ = test[features].copy()
+        df = pd.concat([train_, test_], axis=0)
+
+        p_min = df[features].quantile(min_clip)
+        p_max = df[features].quantile(max_clip)
+        # print(f"{min_clip * 100} / {max_clip * 100} % clip : {p_min} / {p_max}")
+        # 1％点以下の値は1％点に、99％点以上の値は99％点にclippingする
+        df[features] = df[features].clip(p_min, p_max, axis=1)
+
+        train[features] = df.iloc[: train.shape[0]]
+        test[features] = df.iloc[train.shape[0] :].reset_index(drop=True)
+        return train, test
+
+    train, test = _clipping(train, test, features_g, min_clip, max_clip)
+    train, test = _clipping(train, test, features_c, min_clip, max_clip)
+
+    return train, test
+
+
+def fe_noise(
+    train, test, features_g=None, features_c=None, sigma_down_ratio=10.0, seed=123
+):
+    """g-,c-それぞれにノイズ加算"""
+    # g-,c-単位で実行
+    features_g = list(train.columns[4:776]) if features_g is None else features_g
+    features_c = list(train.columns[776:876]) if features_c is None else features_c
+
+    def df_add_normal_noise(df, mu, sigma, seed):
+        """データフレームにガウシアンノイズを加算する
+        ノイズの平均と標準偏差指定必要"""
+        np.random.seed(seed)
+        noise = np.random.normal(mu, sigma, [df.shape[0], df.shape[1]])
+        df = df + noise
+        return df
+
+    def _noise(train, test, features, sigma_down_ratio, seed):
+        train_ = train[features].copy()
+        test_ = test[features].copy()
+        df = pd.concat([train_, test_], axis=0)
+
+        mu = np.median(df.values)
+        sigma = np.std(df.values) / sigma_down_ratio  # 単純に標準偏差渡すと値変わりすぎるので割り算で減らす
+        df = df_add_normal_noise(df, mu, sigma, seed)
+
+        train[features] = df.iloc[: train.shape[0]]
+        test[features] = df.iloc[train.shape[0] :].reset_index(drop=True)
+        return train, test
+
+    train, test = _noise(train, test, features_g, sigma_down_ratio, seed)
+    train, test = _noise(train, test, features_c, sigma_down_ratio, seed)
+
+    return train, test
+
+
 def fe_stats(
     train,
     test,
@@ -361,7 +433,7 @@ def fe_quantile_transformer(train, test, features_g=None, features_c=None):
 
 
 def fe_variance_threshold(train, test, threshold=0.8):
-    """分散で低い特徴量削除"""
+    """分散低い特徴量削除"""
     # https://scikit-learn.org/stable/modules/generated/sklearn.feature_selection.VarianceThreshold.html?highlight=variancethreshold#sklearn.feature_selection.VarianceThreshold
     # トレーニングセットの分散がこのしきい値よりも低い特徴は削除
     from sklearn.feature_selection import VarianceThreshold
@@ -543,9 +615,53 @@ def fe_ctl_mean(
 
     train_ = df.iloc[: train.shape[0]]
     test_ = df.iloc[train.shape[0] :].reset_index(drop=True)
-    features = train_.columns[2:]
 
-    return train_, test_, features
+    return train_, test_, get_features(train_)
+
+
+def fe_cp_dose_time(train, test):
+    """
+    cp_dose, cp_time 列を連結させる
+    ※lgbでcp_dose_time列を予測したnotebookででてた
+    cp_dose_time列を予測できることから用量と期間は細胞の生存率と遺伝子発現に影響を及すことを示している
+    https://www.kaggle.com/gopidurgaprasad/moa-predict-cp-dose-cp-time-with-acc-0-94
+    """
+    train["cp_dose_time"] = train["cp_dose"] + "_" + train["cp_time"].astype("str")
+    test["cp_dose_time"] = test["cp_dose"] + "_" + test["cp_time"].astype("str")
+    train["cp_dose_time"] = train["cp_dose_time"].map(
+        {"D1_24": 0, "D1_48": 1, "D1_72": 2, "D2_24": 3, "D2_48": 4, "D2_72": 5}
+    )
+    test["cp_dose_time"] = test["cp_dose_time"].map(
+        {"D1_24": 0, "D1_48": 1, "D1_72": 2, "D2_24": 3, "D2_48": 4, "D2_72": 5}
+    )
+    return train, test, get_features(train)
+
+
+def fe_cp_onehot(train, test):
+    """
+    cp_type, cp_dose, cp_time 列をonehot化
+    https://www.kaggle.com/lhagiimn/random-ensemble-neural-networks
+    """
+
+    def _onehot(df):
+        df["cp_type_trt"] = np.where(df["cp_type"].values == "trt_cp", 1, 0)
+        df["cp_type_ctl"] = np.where(df["cp_type"].values == "trt_cp", 0, 1)
+        df["cp_dose_D1"] = np.where(df["cp_dose"].values == "D1", 1, 0)
+        df["cp_dose_D2"] = np.where(df["cp_dose"].values == "D1", 0, 1)
+        df["cp_time_24"] = np.where(df["cp_time"].values == 24, 1, 0)
+        df["cp_time_48"] = np.where(df["cp_time"].values == 48, 1, 0)
+        df["cp_time_72"] = np.where(df["cp_time"].values == 72, 1, 0)
+
+    _onehot(train)
+    _onehot(test)
+    train = train.drop(["cp_type", "cp_dose", "cp_time"], axis=1)
+    test = test.drop(["cp_type", "cp_dose", "cp_time"], axis=1)
+    return train, test, get_features(train)
+
+
+# ===================================================================================================
+# ---------------------------------------------- Other ----------------------------------------------
+# ===================================================================================================
 
 
 def targets_gather(train_targets, is_enc=False):
@@ -562,3 +678,26 @@ def targets_gather(train_targets, is_enc=False):
         # display(_df)
 
     return _targets["targets"], _df
+
+
+def fetch_posi_ratio_class_weight(train_targets):
+    """陽性/陰性ラベルの割合の逆数でclass_weight作る
+    一番陽性ラベル多いnfkb_inhibitor クラスが1.0になり、少ないクラスが大きい値になる
+    """
+    if "sig_id" in train_targets.columns:
+        train_targets = train_targets.drop(["sig_id"], axis=1)
+
+    # 陽性/陰性ラベルの割合
+    df_value_counts = train_targets.apply(lambda col: col.value_counts())
+    df_value_counts = pd.DataFrame(
+        df_value_counts.loc[1] / df_value_counts.loc[0], columns=["label_ratio(1/0)"]
+    )  # .sort_values("label_ratio(1/0)", ascending=False)
+
+    max_ratio = np.max(df_value_counts["label_ratio(1/0)"])
+    df_class_weights = max_ratio / df_value_counts["label_ratio(1/0)"]
+    class_weights = df_class_weights.to_dict()
+    _class_weights = {}
+    for ii, col in enumerate(train_targets.columns):
+        _class_weights[ii] = class_weights[col]
+
+    return _class_weights

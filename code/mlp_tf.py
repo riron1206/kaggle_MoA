@@ -496,10 +496,19 @@ start_predictors = [
 
 def seed_everything(seed=123):
     """乱数固定"""
+    os.environ["PYTHONHASHSEED"] = str(seed)
+
     random.seed(seed)
     np.random.seed(seed)
-    os.environ["PYTHONHASHSEED"] = str(seed)
     tf.random.set_seed(seed)
+
+    graph = tf.compat.v1.get_default_graph()
+    session_conf = tf.compat.v1.ConfigProto(
+        inter_op_parallelism_threads=1, intra_op_parallelism_threads=1
+    )
+    sess = tf.compat.v1.Session(graph=graph, config=session_conf)
+
+    tf.compat.v1.keras.backend.set_session(sess)
 
 
 def submission_post_process(
@@ -686,7 +695,9 @@ def create_model_rs(shape1, shape2, n_class=206):
     output = tf.keras.layers.Dense(n_class, activation="sigmoid")(head_3)
 
     model = tf.keras.models.Model(inputs=[input_1, input_2], outputs=output)
-    opt = tf.optimizers.Adam(learning_rate=LR)
+    rs_lr = 0.03  # C:\Users\81908\jupyter_notebook\poetry_work\tfgpu\01_MoA_compe\notebook\base_line\20201105
+    print(f"rs_lr: {rs_lr}")
+    opt = tf.optimizers.Adam(learning_rate=rs_lr)
     model.compile(
         optimizer=opt,
         loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.0015),  # ラベルスムージング
@@ -751,8 +762,6 @@ def create_model_4l(shape, n_class=206):
     out = tf.keras.layers.Dense(n_class, activation="sigmoid")(x)
     model = tf.keras.models.Model(inputs=inp, outputs=out)
     opt = tf.optimizers.Adam(learning_rate=LR)
-    # opt = AdaBeliefOptimizer(learning_rate=LR, epsilon=1e-15)
-    # print(opt)
     model.compile(
         optimizer=opt,
         loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.0020),  # ラベルスムージング
@@ -820,7 +829,9 @@ def create_model_3l_v2(shape, n_class=206):
         tf.keras.layers.Dense(n_class, activation="sigmoid")
     )(x)
     model = tf.keras.models.Model(inputs=inp, outputs=out)
-    opt = AdaBeliefOptimizer(learning_rate=LR)
+    _lr = 0.01  # C:\Users\81908\jupyter_notebook\poetry_work\tfgpu\01_MoA_compe\notebook\base_line\20201105
+    print(f"3l_v2_lr: {_lr}")
+    opt = AdaBeliefOptimizer(learning_rate=_lr)
     model.compile(
         optimizer=opt,
         loss=tf.keras.losses.BinaryCrossentropy(label_smoothing=0.0015),
@@ -847,7 +858,9 @@ def create_model_2l(shape, n_class=206):
         tf.keras.layers.Dense(n_class, activation="sigmoid")
     )(x)
     model = tf.keras.models.Model(inputs=inp, outputs=out)
-    opt = tf.optimizers.Adam(learning_rate=LR)
+    _lr = 0.1  # C:\Users\81908\jupyter_notebook\poetry_work\tfgpu\01_MoA_compe\notebook\base_line\20201105
+    print(f"2l_lr: {_lr}")
+    opt = tf.optimizers.Adam(learning_rate=_lr)
     opt = tfa.optimizers.Lookahead(opt, sync_period=10)
     model.compile(
         optimizer=opt,
@@ -898,7 +911,9 @@ def create_model_stack_tabnet(
     else:
         model = tabnet_tf.StackedTabNetClassifier(**params)
     if is_adabelief:
-        opt = AdaBeliefOptimizer(learning_rate=LR)
+        tabnet_lr = 0.01  # C:\Users\81908\jupyter_notebook\poetry_work\tfgpu\01_MoA_compe\notebook\base_line\20201105
+        print(f"tabnet_lr: {tabnet_lr}")
+        opt = AdaBeliefOptimizer(learning_rate=tabnet_lr)
     else:
         opt = tf.optimizers.Adam(LR)
     if is_SWA:
@@ -936,7 +951,9 @@ def create_model_tabnet_class(
     else:
         model = tabnet_tf.TabNetClassifier(**params)
     if is_adabelief:
-        opt = AdaBeliefOptimizer(learning_rate=LR)
+        tabnet_lr = 0.01  # C:\Users\81908\jupyter_notebook\poetry_work\tfgpu\01_MoA_compe\notebook\base_line\20201105
+        print(f"tabnet_lr: {tabnet_lr}")
+        opt = AdaBeliefOptimizer(learning_rate=tabnet_lr)
     else:
         opt = tf.optimizers.Adam(LR)
     if is_SWA:
@@ -949,6 +966,47 @@ def create_model_tabnet_class(
         metrics=tf.keras.metrics.BinaryCrossentropy(),
     )
     return model
+
+
+class Cutmix(tf.keras.utils.Sequence):
+    """大堀さんが作ったCutMix"""
+
+    def __init__(self, X, y=None, batch_size=32, alpha=1.0):
+        self.X = np.asarray(X)
+
+        if y is None:
+            self.y = y
+        else:
+            self.y = np.asarray(y)
+
+        self.batch_size = batch_size
+        self.alpha = alpha
+
+    def __getitem__(self, i):
+        X_batch = self.X[i * self.batch_size : (i + 1) * self.batch_size]
+
+        n_samples, n_features = self.X.shape
+        batch_size = X_batch.shape[0]
+        shuffle = np.random.choice(n_samples, batch_size)
+
+        l = np.random.beta(self.alpha, self.alpha)
+        mask = np.random.choice([0.0, 1.0], size=n_features, p=[1.0 - l, l])  # この部分
+        X_shuffle = self.X[shuffle]
+        X_batch = mask * X_batch + (1.0 - mask) * X_shuffle
+
+        if self.y is None:
+            return X_batch, None
+
+        y_batch = self.y[i * self.batch_size : (i + 1) * self.batch_size]
+        y_shuffle = self.y[shuffle]
+        y_batch = l * y_batch + (1.0 - l) * y_shuffle
+
+        return X_batch, y_batch
+
+    def __len__(self):
+        n_samples = self.X.shape[0]
+
+        return int(np.ceil(n_samples / self.batch_size))
 
 
 # ===================================================================================================
@@ -967,6 +1025,7 @@ def train_and_evaluate(
     model_type="3l",
     model_dir="mlp_tf",
     tabnet_params=None,
+    class_weight=None,
 ):
     """モデル作成"""
     print(f"fold:{FOLDS}, epochs:{EPOCHS}, batch_size:{BATCH_SIZE}, LR:{LR}")
@@ -974,6 +1033,7 @@ def train_and_evaluate(
 
     test_pred_seed = []
     oof_pred_seed = []
+    train_targets_have_sig_id = train_targets.copy()
 
     for seed in seeds:
         seed_everything(seed)
@@ -996,9 +1056,9 @@ def train_and_evaluate(
         # # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
         # for fold, (trn_ind, val_ind) in tqdm(enumerate(MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False).split(train_targets, train_targets))):
         # 薬物およびマルチラベル層別化 20201104
-        # scored = drug_MultilabelStratifiedKFold(seed=seed, scored=train_targets,)  # MultilabelStratifiedKFoldの乱数指定
+        # scored = drug_MultilabelStratifiedKFold(seed=seed, scored=train_targets_have_sig_id,)  # MultilabelStratifiedKFoldの乱数指定
         scored = drug_MultilabelStratifiedKFold(
-            scored=train_targets,
+            scored=train_targets_have_sig_id,
         )  # MultilabelStratifiedKFoldの乱数固定
         for fold in tqdm(range(FOLDS)):
             val_ind = scored[scored["fold"] == fold].index
@@ -1007,8 +1067,8 @@ def train_and_evaluate(
             # sig_id列残っているはずなので消す
             if "sig_id" in train_targets.columns:
                 train_targets = train_targets.drop(["sig_id"], axis=1)
-                # train_targets.drop(["sig_id"], inplace=True, axis=1)
 
+            batch_size = BATCH_SIZE
             K.clear_session()
             if model_type == "5l":
                 model = create_model_5l(len(features), n_class=train_targets.shape[1])
@@ -1031,10 +1091,14 @@ def train_and_evaluate(
             elif model_type == "lr":
                 model = create_model_lr(len(features), n_class=train_targets.shape[1])
             elif model_type == "stack_tabnet":
+                batch_size = 16  # tabnetはbatchサイズ小さい方がいい
+                print(f"tabnet batch_size: {batch_size}")
                 model = create_model_stack_tabnet(
                     len(features), n_class=train_targets.shape[1], params=tabnet_params,
                 )
             elif model_type == "tabnet_class":
+                batch_size = 16  # tabnetはbatchサイズ小さい方がいい
+                print(f"tabnet batch_size: {batch_size}")
                 model = create_model_tabnet_class(
                     len(features), n_class=train_targets.shape[1], params=tabnet_params,
                 )
@@ -1090,7 +1154,7 @@ def train_and_evaluate(
                     y_train,
                     validation_data=([x_val, x_val_], y_val),
                     epochs=EPOCHS,
-                    batch_size=BATCH_SIZE,
+                    batch_size=batch_size,
                     callbacks=[early_stopping, reduce_lr, checkpoint],
                     verbose=VERBOSE,
                 )
@@ -1111,9 +1175,10 @@ def train_and_evaluate(
                     y_train,
                     validation_data=(x_val, y_val),
                     epochs=EPOCHS,
-                    batch_size=BATCH_SIZE,
+                    batch_size=batch_size,
                     callbacks=[early_stopping, reduce_lr, checkpoint],
                     verbose=VERBOSE,
+                    class_weight=class_weight,
                 )
 
                 model.load_weights(model_path)
@@ -1169,6 +1234,7 @@ def inference(
     """推論用"""
     test_pred_seed = []
     oof_pred_seed = []
+    train_targets_have_sig_id = train_targets.copy()
 
     for seed in seeds:
         seed_everything(seed)
@@ -1187,9 +1253,9 @@ def inference(
         # # MultiLabelStratifiedKFold(n_splits=5, shuffle=False) で乱数固定する 20201028
         # for fold, (trn_ind, val_ind) in tqdm(enumerate(MultilabelStratifiedKFold(n_splits=FOLDS, shuffle=False).split(train_targets, train_targets))):
         # 薬物およびマルチラベル層別化 20201104
-        # scored = drug_MultilabelStratifiedKFold(seed=seed, scored=train_targets,)  # MultilabelStratifiedKFoldの乱数指定
+        # scored = drug_MultilabelStratifiedKFold(seed=seed, scored=train_targets_have_sig_id,)  # MultilabelStratifiedKFoldの乱数指定
         scored = drug_MultilabelStratifiedKFold(
-            scored=train_targets
+            scored=train_targets_have_sig_id
         )  # MultilabelStratifiedKFoldの乱数固定
         for fold in tqdm(range(FOLDS)):
             val_ind = scored[scored["fold"] == fold].index
@@ -1198,7 +1264,6 @@ def inference(
             # sig_id列残っているはずなので消す
             if "sig_id" in train_targets.columns:
                 train_targets = train_targets.drop(["sig_id"], axis=1)
-                # train_targets.drop(["sig_id"], inplace=True, axis=1)
 
             K.clear_session()
             x_train, x_val = (
@@ -1307,8 +1372,9 @@ def inference(
     return test_pred_avg, oof_pred_avg
 
 
-def nelder_mead_weights(y_true: np.ndarray, oof_preds: list):
-    """ネルダーミードでモデルのブレンド重み最適化"""
+def nelder_mead_weights(y_true: np.ndarray, oof_preds: list, method="L-BFGS-B"):
+    """ネルダーミードでモデルのブレンド重み最適化
+    ネルダーミード遅い(重み3つで1分ぐらいかかる)から、L-BFGS-B をデフォルトの方法にする(重み3つで30秒ぐらいかかる)"""
     from scipy.optimize import minimize
 
     def opt(ws, y_true, y_preds):
@@ -1322,9 +1388,62 @@ def nelder_mead_weights(y_true: np.ndarray, oof_preds: list):
         return mean_log_loss(y_true, y_pred)
 
     initial_weights = np.array([1.0 / len(oof_preds)] * len(oof_preds))
-    result = minimize(
-        opt, x0=initial_weights, args=(y_true, oof_preds), method="Nelder-Mead"
-    )
+    if method in ["L-BFGS-B", "TNC", "COBYLA ", "SLSQP"]:
+        # パラメータの範囲に制約のある方法で最適化
+        # 1位の人は L-BFGS-B 使ってたので
+        # https://www.kaggle.com/gogo827jz/optimise-blending-weights-with-bonus-0
+        # パラメータの範囲は bounds に，最小値と最大値の対の系列を指定する必要あり
+        # http://www.kamishima.net/mlmpyja/lr/optimization.html
+        bnds = [(0, 1) for _ in range(len(oof_preds))]
+        result = minimize(
+            opt,
+            x0=initial_weights,
+            args=(y_true, oof_preds),
+            method=method,
+            bounds=bnds,
+        )
+    else:
+        result = minimize(
+            opt, x0=initial_weights, args=(y_true, oof_preds), method=method
+        )
+    best_weights = result.x
+    return best_weights
+
+
+def nelder_mead_weights_class(y_true: np.ndarray, oof_preds: list, method="L-BFGS-B"):
+    """ネルダーミードでモデルのクラスごとのブレンド重み最適化
+    ネルダーミード遅いから、L-BFGS-B をデフォルトの方法にする
+    重みはクラス数分あるのでめちゃめちゃ時間かかる。。。"""
+    from scipy.optimize import minimize
+
+    def opt(ws, y_true, y_preds):
+        y_pred = None
+        for y_p in y_preds:
+            if y_pred is None:
+                y_pred = ws * y_p
+            else:
+                y_pred += ws * y_p
+        return mlp_tf.mean_log_loss(y_true, y_pred)
+
+    initial_weights = np.array([1.0 / y_true.shape[1]] * y_true.shape[1])
+    if method in ["L-BFGS-B", "TNC", "COBYLA ", "SLSQP"]:
+        # パラメータの範囲に制約のある方法で最適化
+        # 1位の人は L-BFGS-B 使ってたので
+        # https://www.kaggle.com/gogo827jz/optimise-blending-weights-with-bonus-0
+        # パラメータの範囲は bounds に，最小値と最大値の対の系列を指定する必要あり
+        # http://www.kamishima.net/mlmpyja/lr/optimization.html
+        bnds = [(0, 1) for _ in range(y_true.shape[1])]
+        result = minimize(
+            opt,
+            x0=initial_weights,
+            args=(y_true, oof_preds),
+            method=method,
+            bounds=bnds,
+        )
+    else:
+        result = minimize(
+            opt, x0=initial_weights, args=(y_true, oof_preds), method=method
+        )
     best_weights = result.x
     return best_weights
 
@@ -1348,6 +1467,7 @@ def run_mlp_tf_logger(
     p_min=1e-15,
     is_train=True,
     tabnet_params=None,
+    class_weight=None,
 ):
     """モデル作成/推論してログファイルに結果書き込む"""
     str_train_flag = "train" if is_train else "inference"
@@ -1363,6 +1483,7 @@ def run_mlp_tf_logger(
             model_type=model_type,
             model_dir=model_dir,
             tabnet_params=tabnet_params,
+            class_weight=class_weight,
         )
     else:
         # inference
@@ -1413,6 +1534,7 @@ def run_mlp_tf_blend_logger(
         "tabnet_class",
     ],
     is_train=True,
+    class_weight=None,
     is_nelder=False,
 ):
     """モデルブレンディングしてログファイルに結果書き込む"""
@@ -1433,6 +1555,7 @@ def run_mlp_tf_blend_logger(
             model_type=_model_type,
             str_condition=_str_condition,
             is_train=is_train,
+            class_weight=class_weight,
         )
         test_preds.append(test_pred)
         oof_preds.append(oof_pred)
@@ -1460,9 +1583,12 @@ def run_mlp_tf_blend_logger(
         # 時間かかるから基本False
         # ------- Nelder-Mead で最適なブレンディングの重み見つける -------
         print("running Nelder-Mead...")
-        _train_targets = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
-        _train_targets.drop(["sig_id"], inplace=True, axis=1)
-        best_weights = nelder_mead_weights(_train_targets.values, oof_preds)
+        # _train_targets = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
+        # _train_targets.drop(["sig_id"], inplace=True, axis=1)
+        # best_weights = nelder_mead_weights(_train_targets.values, oof_preds)
+        if "sig_id" in train_targets.columns:
+            train_targets = train_targets.drop(["sig_id"], axis=1)
+        best_weights = nelder_mead_weights(train_targets.values, oof_preds)
         wei_oof = None
         for wei, pre in zip(best_weights, oof_preds):
             if wei_oof is None:

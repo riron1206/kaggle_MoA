@@ -1,0 +1,57 @@
+import numpy as np
+from iterstrat.ml_stratifiers import MultilabelStratifiedKFold
+from sklearn.model_selection._split import _BaseKFold
+
+
+class MultilabelGroupStratifiedKFold(_BaseKFold):
+    def __init__(self, n_splits=5, random_state=None, shuffle=False):
+        super().__init__(n_splits=n_splits, random_state=random_state, shuffle=shuffle)
+
+    def _iter_test_indices(self, X=None, y=None, groups=None):
+        cv = MultilabelStratifiedKFold(
+            n_splits=self.n_splits,
+            random_state=self.random_state,
+            shuffle=self.shuffle,
+        )
+
+        value_counts = groups.value_counts()
+        regular_index = value_counts.loc[
+            (value_counts == 6) | (value_counts == 12) | (value_counts == 18)
+        ].index.sort_values()
+        irregular_index = value_counts.loc[
+            (value_counts != 6) & (value_counts != 12) & (value_counts != 18)
+        ].index.sort_values()
+
+        group_to_fold = {}
+        tmp = Y.groupby(groups).mean().loc[regular_index]
+
+        for fold, (_, test) in enumerate(cv.split(tmp, tmp)):
+            group_to_fold.update({group: fold for group in tmp.index[test]})
+
+        sample_to_fold = {}
+        tmp = Y.loc[groups.isin(irregular_index)]
+
+        for fold, (_, test) in enumerate(cv.split(tmp, tmp)):
+            sample_to_fold.update({sample: fold for sample in tmp.index[test]})
+
+        folds = groups.map(group_to_fold)
+        is_na = folds.isna()
+        folds[is_na] = folds[is_na].index.map(sample_to_fold).values
+
+        for i in range(self.n_splits):
+            yield np.where(folds == i)[0]
+
+
+dtype = {"cp_type": "category", "cp_dose": "category"}
+index_col = "sig_id"
+X = pd.read_csv(
+    "../input/lish-moa/train_features.csv", dtype=dtype, index_col=index_col
+)
+Y = pd.read_csv("../input/lish-moa/train_targets_scored.csv", index_col=index_col)
+groups = pd.read_csv(
+    "../input/lish-moa/train_drug.csv", index_col=index_col, squeeze=True
+)
+cv = DrugAwareMultilabelStratifiedKFold(shuffle=True, random_state=42, n_splits=12)
+
+for _, test in cv.split(X, Y, groups):
+    ...
