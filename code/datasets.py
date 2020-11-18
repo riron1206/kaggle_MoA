@@ -36,7 +36,12 @@ def drug_MultilabelStratifiedKFold(folds=FOLDS, seed=None, scored=None):
     drug = pd.read_csv(f"{DATADIR}/train_drug.csv")
     if scored is None:
         scored = pd.read_csv(f"{DATADIR}/train_targets_scored.csv")
-    targets = scored.drop(["sig_id"], axis=1).columns  # sig_id列以外がクラス列
+
+    if "sig_id" in scored.columns:
+        targets = scored.drop(["sig_id"], axis=1).columns  # sig_id列以外がクラス列
+    else:
+        targets = scored.columns
+
     scored = scored.merge(drug, on="sig_id", how="left")
 
     # LOCATE DRUGS 数が少ない薬(18行以下)は分ける

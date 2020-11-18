@@ -1,0 +1,128 @@
+nn_order: batch-act-drop	0.01598534935121886
+nn_order: batch-drop-act	0.016350596820895756
+nn_order: drop-batch-act	0.016445339062605376
+nn_order: drop-act-batch	0.01643022913185095
+nn_order: act-batch-drop	0.016053797103830637
+nn_order: act-drop-batch	0.016171014707040885
+is_weightnorm: True	0.015985415713707717
+is_weightnorm: False	0.016987768025813633
+cp_type + cp_dose	0.01612990869134262
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'is_quantile': True}	0.016057311427842606
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': True, 'is_c_squared': True, 'is_c_abs': True, 'is_g_valid': True, 'pca_n_components_g': 70, 'pca_n_components_c': 10, 'is_scaling': True, 'is_quantile': False}	0.01603325570476619
+nn_order: batch-act-drop	0.015936418042959845
+nn_order: batch-act-drop	0.0159855380761576
+nn_order: batch-drop-act	0.016350523039250876
+nn_order: drop-batch-act	0.01644529786903003
+nn_order: drop-act-batch	0.016430226703938736
+nn_order: act-batch-drop	0.01605447707425592
+nn_order: act-drop-batch	0.016171605006202773
+drop_act_rate: 0.05	0.016411088165910817
+drop_act_rate: 0.05	0.016411063601297536
+drop_act_rate: 0.25	0.01704799548943097
+
+
+
+nn_order: batch-act-drop	0.015985210037633046
+nn_order: batch-drop-act	0.016350162491462397
+nn_order: drop-batch-act	0.01644537217797411
+nn_order: drop-act-batch	0.01643022640455254
+nn_order: act-batch-drop	0.016048944294683037
+nn_order: act-drop-batch	0.016171011994774928
+is_weightnorm: True	0.015985343654211663
+is_weightnorm: False	0.01698814041416128
+drop_act_rate: 0.05	0.016411059290188466
+drop_act_rate: 0.25	0.017047998505363537
+cp_type + cp_dose	0.016129992535089153
+cp_type	0.016456924854334108
+cp_dose	0.01667289667212709
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0}	0.01585747832180785
+preprocess_params: {'is_clip': True, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0}	0.015889931934305622
+preprocess_params: {'is_clip': False, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0}	0.015911985586111486
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0}	0.01589014417404453
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': True, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0}	0.015865842431130848
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': True, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0}	0.015867500248336133
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': True, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0}	0.015895402315189495
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 70, 'pca_n_components_c': 10, 'is_scaling': False, 'quantile_n_components': 0}	0.01592336290722209
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 600, 'pca_n_components_c': 50, 'is_scaling': False, 'quantile_n_components': 0}	0.015968654243367023
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': True, 'quantile_n_components': 0}	0.01590226998158715
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 100}	0.01605731329375761
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 1000}	0.016059855775856238
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': True, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 600, 'pca_n_components_c': 50, 'is_scaling': False, 'quantile_n_components': 100}	0.016223504788690828
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': True, 'is_c_squared': True, 'is_c_abs': True, 'is_g_valid': True, 'pca_n_components_g': 70, 'pca_n_components_c': 10, 'is_scaling': True, 'quantile_n_components': 0}	0.01599666743620693
+del ctl_vehicle	0.01593640311711526
+cutmix_alpha: 0.3	0.01583407378878142
+cutmix_alpha: 1.0	0.01582797261982463
+mixup_alpha: 0.2	0.01585594197961324
+mixup_alpha: 0.5	0.015812059651528404
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': True, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0}	0.015839894272058425
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': True, 'is_c_abs': True, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0}	0.015897423194600663
+stddev: 0.0, cutmix_alpha: 1.0	0.015715215683948448
+stddev: 0.0, mixup_alpha: 0.5	0.015837970591081933
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 100, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': False, 'fe_variance_threshold': False}	0.01605730986084909
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': True, 'is_c_squared': True, 'is_c_abs': True, 'is_g_valid': True, 'pca_n_components_g': 70, 'pca_n_components_c': 10, 'is_scaling': True, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': False, 'fe_variance_threshold': False}	0.01599854448316576
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': True, 'is_c_abs': True, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'fe_variance_threshold': False}	0.01585646679315687
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': True, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 600, 'pca_n_components_c': 50, 'is_scaling': False, 'quantile_n_components': 100, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.8}	0.016216805928941477
+del ctl_vehicle, stddev: 0.0, cutmix_alpha: 1.0, preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015838586457806742
+del ctl_vehicle, stddev: 0.0, cutmix_alpha: 1.0, preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': False, 'variance_threshold': 0.0}	0.01583858615914035
+del ctl_vehicles, tddev: 0.0, cutmix_alpha: 1.0	0.01587057019978518
+stddev: 0.0, cutmix_alpha: 1.0	0.01582259928665987
+
+
+
+
+nn_order: batch-act-drop	0.015985684071960313
+nn_order: batch-drop-act	0.016349560808381864
+nn_order: drop-batch-act	0.01644531014749022
+nn_order: drop-act-batch	0.016430224215919793
+nn_order: act-batch-drop	0.016053474633091317
+nn_order: act-drop-batch	0.016171339817555343
+is_weightnorm: True	0.015985588891270556
+is_weightnorm: False	0.01698612993024874
+drop_act_rate: 0.05	0.016411081229058176
+drop_act_rate: 0.25	0.017047980939148145
+cutmix_alpha: 0.3	0.015834075264526248
+cutmix_alpha: 1.0	0.01582797283297462
+stddev: 0.0, cutmix_alpha: 1.0	0.01582260091243955
+mixup_alpha: 0.2	0.01585606317687861
+mixup_alpha: 0.5	0.015811547251864327
+stddev: 0.0, mixup_alpha: 0.5	0.01595175720154114
+cp_type + cp_dose	0.016129993302467588
+cp_type	0.016456924425274723
+cp_dose	0.016672892182358734
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015859584553864197
+preprocess_params: {'is_clip': True, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015879353806231383
+preprocess_params: {'is_clip': False, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015910452327254205
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015923571165005597
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': True, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015875933071122197
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': True, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.01590171192115532
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': True, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.01589523748615384
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 70, 'pca_n_components_c': 10, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.01592401508486589
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 600, 'pca_n_components_c': 50, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015968650425839746
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': True, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015897730105485824
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 100, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.01605731185773959
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 100, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': False, 'variance_threshold': 0.0}	0.016057313096525305
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 1000, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.016059854792655034
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': True, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 600, 'pca_n_components_c': 50, 'is_scaling': False, 'quantile_n_components': 100, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.016223505217168577
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': True, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 600, 'pca_n_components_c': 50, 'is_scaling': False, 'quantile_n_components': 100, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.8}	0.016216804735043187
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': True, 'is_c_squared': True, 'is_c_abs': True, 'is_g_valid': True, 'pca_n_components_g': 70, 'pca_n_components_c': 10, 'is_scaling': True, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.016031807965636104
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': True, 'is_c_squared': True, 'is_c_abs': True, 'is_g_valid': True, 'pca_n_components_g': 70, 'pca_n_components_c': 10, 'is_scaling': True, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': False, 'variance_threshold': 0.0}	0.015961098308942972
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': True, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015823361466178194
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': True, 'is_c_abs': True, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015859569927163867
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': True, 'is_c_abs': True, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015867548727980865
+del ctl_vehicle	0.01593627873622767
+del ctl_vehicles, tddev: 0.0, cutmix_alpha: 1.0	0.015870570934332473
+del ctl_vehicle, stddev: 0.0, cutmix_alpha: 1.0, preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.01583858676430594
+del ctl_vehicle, stddev: 0.0, cutmix_alpha: 1.0, preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': False, 'variance_threshold': 0.0}	0.01583858652263073
+mixup_alpha: 0.5, params: {'activation': 'elu', 'kernel_initializer': 'he_normal', 'label_smoothing': 0.0005, 'lr': 0.03, 'n_layers': 7, 'n_units': 256, 'rate': 0.25, 'skip': True, 'stddev': 0.45, 'other_params': {'optimizer': 'adabelief', 'is_lookahead': False, 'is_swa': False, 'is_weightnorm': True, 'nn_order': 'batch-act-drop', 'drop_act_rate': 0.0}}, fit_params: {'batch_size': 32, 'epochs': 1000, 'verbose': 0}	0.015857352552190205
+stddev: 0.0, cutmix_alpha: 1.0, params: {'activation': 'elu', 'kernel_initializer': 'he_normal', 'label_smoothing': 0.0005, 'lr': 0.03, 'n_layers': 7, 'n_units': 256, 'rate': 0.25, 'skip': True, 'stddev': 0.0, 'other_params': {'optimizer': 'adabelief', 'is_lookahead': False, 'is_swa': False, 'is_weightnorm': True, 'nn_order': 'batch-act-drop', 'drop_act_rate': 0.0}}, fit_params: {'batch_size': 32, 'epochs': 1000, 'verbose': 0}	0.01578128754073746
+preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': True, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015870346833396873
+pretrain, stddev: 0.0, cutmix_alpha: 1.0	0.016281214295192914
+pretrain, stddev: 0.0, cutmix_alpha: 1.0, preprocess_params: {'is_clip': True, 'is_stat': True, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015954196787044485
+start_predictors, stddev: 0.0, cutmix_alpha: 1.0	0.015933981452463882
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 600, 'pca_n_components_c': 50, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.015968692570968685
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 600, 'pca_n_components_c': 50, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': False, 'variance_threshold': 0.0}	0.01597841556717841
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 100, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.016057313121728308
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 100, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': False, 'variance_threshold': 0.0}	0.016057310025097284
+preprocess_params: {'is_clip': False, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 0, 'pca_n_components_c': 0, 'is_scaling': False, 'quantile_n_components': 1000, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': False, 'variance_threshold': 0.0}	0.0160598550625519
+preprocess_params: {'is_clip': True, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 70, 'pca_n_components_c': 10, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': True, 'variance_threshold': 0.0}	0.01591545449758546
+preprocess_params: {'is_clip': True, 'is_stat': False, 'is_add_nonscored': False, 'is_c_squared': False, 'is_c_abs': False, 'is_g_valid': False, 'pca_n_components_g': 70, 'pca_n_components_c': 10, 'is_scaling': False, 'quantile_n_components': 0, 'fe_cluster_n_clusters_g': 0, 'fe_cluster_n_clusters_c': 0, 'is_fit_train_only': False, 'variance_threshold': 0.0}	0.01593495103980279

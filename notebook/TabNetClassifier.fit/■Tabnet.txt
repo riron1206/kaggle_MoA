@@ -1,0 +1,27 @@
+1. MLPClassifier.fit を fork する
+2. validation strategy を決定する
+3. 一部の実験を vanilla の状態から再実施する
+  - activation, bn, dropout の順序
+  - gaussian noise, cutout, mixup, cutmix
+  - weight normalization の有無
+  - cp_type と cp_dose の有無
+  - ClippedFeatures, QuantileTransformer 等の前処理
+  - PCA features, RowStatistics 等の特徴エンジニアリング
+  - ctl_vehicle 行の削除
+4. optuna でチューニングする
+
+def objective(trial):
+    # activation = trial.suggest_categorical("activation", ["elu", "swish"])
+    batch_size = trial.suggest_categorical("batch_size", [16, 32, 64])
+    # kernel_initializer = trial.suggest_categorical("kernel_initializer", ["he_normal", "he_uniform"])
+    label_smoothing = trial.suggest_loguniform("label_smoothing", 1e-04, 1e-03)
+    lr = trial.suggest_loguniform("lr", 3e-03, 3e-01)
+    n_layers = trial.suggest_int("n_layers", 5, 8)
+    n_units = trial.suggest_categorical("n_units", [128, 256, 512])
+    rate = trial.suggest_uniform("rate", 0.2, 0.3)
+    skip = trial.suggest_categorical("skip", [False, True])
+    stddev = trial.suggest_uniform("stddev", 0.4, 0.5)
+
+    ...
+
+    return score
