@@ -202,3 +202,41 @@ CV 0.01519 / LB  0.01858
 - drug_idを特徴量に使う
 　https://www.kaggle.com/c/lish-moa/discussion/195380
 
+----------------------------------------------------------------------------
+
+20201120
+◆今週試した上手くいったこと
+- RapidsのSVM
+　cv: 0.01513 / LB: 出してない (StratifiedKFold。1クラスごとに1つモデル作る方法なので)
+　https://www.kaggle.com/anonamename/moa-rapids-svm
+
+◆今週試した上手くいかなかったこと
+- 在原さんのVotingClassifier.fit, VotingClassifier.predict にLightGBMとMLPを追加してアンサンブル
+　cv下がるがLB悪化
+　cv: 0.01521 / LB: 0.02074 (MultilabelGroupStratifiedKFold)
+　https://www.kaggle.com/anonamename/votingclassifier-fit
+　https://www.kaggle.com/anonamename/votingclassifier-predict
+
+- validation 分割修正してnonscored targets 連結したMLP再試
+　変わらずcv悪化。自分の修正間違ってる？orパラメータの問題？
+　連結前 cv score: 0.01768
+　連結後 cv score: 0.01803
+
+◆来週試したいこと
+- GrowNet
+- マルチラベルでLightGBM学習
+　https://www.kaggle.com/c/lish-moa/discussion/197650
+
+◆疑問（と困ってること）
+- 最終サブどうするか？
+- cvどうするか?
+- アンサンブルするinput揃えるか?
+- 出力ファイルが20GB超えてkaggleカーネルがエラーになる。回避する方法はないか？
+
+
+離散した特徴量だとGBM強い
+連続値の特徴量だとNNに向いてる。今回はこれだからうまくいくみたい(by 大堀さん)
+
+GBMは、データが個別の選択肢を持つ人々の行動に関するものである場合に最適に機能します
+https://twitter.com/JFPuget/status/1233431595455041537
+

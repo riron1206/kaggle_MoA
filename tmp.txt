@@ -1,0 +1,231 @@
+@syokoi gaussian noise, cutout, mixup, cutmix の実験はスキップしてください
+新しい validation strategy で cutmix を実験したところ、resnet、tabnet ともに cv score が改善しました
+
+
+old cv: 0.01419
+new cv: 0.01559
+
+
+X, Y, Y_nonscored, train_features, columns, groups, X_test = load_data()
+
+X = train_features.copy()
+cp_type = {"trt_cp": 0, "ctl_vehicle": 1}
+cp_dose = {"D1": 0, "D2": 1}
+for _X in [X, X_test]:
+    _X["cp_type"] = _X["cp_type"].map(cp_type)
+    _X["cp_dose"] = _X["cp_dose"].map(cp_dose)
+X = X.select_dtypes("number")
+display(X.head())
+
+X, Y, Y_nonscored = preprocess(X, Y, Y_nonscored)
+train_size, n_features = X.shape
+_, n_classes_nonscored = Y_nonscored.shape
+_, n_classes = Y.shape
+
+display(X.head())
+
+out_dir = out_base_dir
+
+print(f"cp_type + cp_dose")
+#oof_loss = train_and_evaluate()
+print("-" * 100)
+
+
+
+    preprocess_params={
+        "is_clip": True,
+        "is_stat": True,
+        "is_add_nonscored": True,
+        "is_c_squared": False,
+        "is_c_abs": False,
+        "is_g_valid": False,
+        "pca_n_components_g": 0,
+        "pca_n_components_c": 0,
+        "is_scaling": False,
+    },
+
+
+
+1. MLPClassifier.fit を fork する
+→持ってきた
+2. validation strategy を決定する
+→デフォルトのパラメつかyがバッチサイズとエポック数を変更したのをvanilla とした
+
+3. 一部の実験を vanilla の状態から再実施する
+  - activation, bn, dropout の順序
+  - gaussian noise, cutout, mixup, cutmix
+  - weight normalization の有無
+  - cp_type と cp_dose の有無
+  - ClippedFeatures, QuantileTransformer 等の前処理
+  - PCA features, RowStatistics 等の特徴エンジニアリング
+  - ctl_vehicle 行の削除
+4. optuna でチューニングする
+
+
+ラグランジュの未定乗数法で双対問題に変換
+
+
+https://machinelearningmastery.com/calibrated-classification-model-in-scikit-learn/
+        # calibrate model on validation data
+        calibrator = CalibratedClassifierCV(clf, cv='prefit')
+        calibrator.fit(X_val, Y_val)
+        val_preds = calibrator.predict(X_val)
+        print(val_preds)
+        print(val_preds.shape)
+        
+        val_preds = np.array(val_preds)[:,:,1].T # take the positive class
+        print(val_preds.shape)
+        
+        
+        
+---------------------------------------------------------------
+def calibrate_Y_pred(X_new: np.ndarray):
+    """
+    predict_probaでだしたY_predをロジスティク回帰で確率に補正する
+    Args:
+        X_new: predict_probaでだしたY_pred.values
+    """
+    
+    counts = np.empty((n_classes))
+
+    Y_cali = np.zeros((train_size, n_classes))
+    Y_cali = pd.DataFrame(Y_cali, columns=Y.columns, index=Y.index)
+
+    for tar in tqdm(range(Y.shape[1])):
+        
+        targets = Y.values[:, tar]
+        X_targets = X_new[:, tar]
+        counts[tar] = targets.sum()
+
+        if targets.sum() >= n_splits:
+
+            skf = StratifiedKFold(n_splits=n_splits, random_state=0, shuffle=True)
+
+            for n, (tr, te) in enumerate(skf.split(targets, targets)):
+                x_tr, x_val = X_targets[tr].reshape(-1, 1), X_targets[te].reshape(-1, 1)
+                y_tr, y_val = targets[tr], targets[te]
+
+                model = LogisticRegression(penalty="none", max_iter=1000)
+                model.fit(x_tr, y_tr)
+                Y_cali[Y.columns[tar]].iloc[te] += model.predict_proba(x_val)[:, 1]
+                
+                joblib.dump(model, f"calibrate_model_target_{tar}.jlb", compress=True)
+
+    with open("counts_calibrate.pkl", "wb") as f:
+        pickle.dump(counts, f)
+
+    with open("Y_pred_calibrate.pkl", "wb") as f:
+        pickle.dump(Y_cali[columns], f)
+        
+    return Y_cali
+---------------------------------------------------------------
+
+cv = MultilabelGroupStratifiedKFold(n_splits=5, random_state=42, shuffle=True)
+cv = StratifiedKFold(n_splits=5, random_state=42, shuffle=True)
+
+Y_target = Y[["atp-sensitive_potassium_channel_antagonist"]]
+#Y_target = Y[["atp-sensitive_potassium_channel_antagonist", "erbb2_inhibitor"]]
+
+#cv_split = cv.split(X, Y_target, groups)
+cv_split = cv.split(X, Y_target)
+
+for j, (trn_idx, val_idx) in tqdm(enumerate(cv_split)):
+    #print(j)
+    #print(trn_idx, val_idx)
+    print(Y_target.iloc[trn_idx].sum())
+    
+    
+---------------------------------------------------------------
+submission =  pd.read_csv(
+    #"../input/lish-moa/sample_submission.csv", dtype=dtype, index_col=index_col
+    f"{DATADIR}/sample_submission.csv", dtype=dtype, index_col=index_col
+)
+submission = submission.replace({0.5: 0.0})
+submission = submission.loc[:, columns]
+---------------------------------------------------------------
+
+0. : orig
+0.015277188560202947
+
+0.015262686686222073 : 4l,5l,rsなし
+0.0152504925483896   : Y_pred_5lとY_pred_rsなし
+0.015242685766185475 : Y_pred_rs.pklなし
+0.015215426124359421 : 全部入り
+---------------------------------------------------------------
+    
+マイナーな特定クラスだけLGBやSVM,XGboostのモデル作成するとかした方がいいのでは？
+
+MLP + ClassifierChain みたいな方法のGrowNetっていうのあるんですね
+https://www.kaggle.com/c/lish-moa/discussion/196436
+
+クラスのバランスが取れていないことの難しさみんな感じているんすね
+https://www.kaggle.com/c/lish-moa/discussion/196463
+
+チューニング（ハイパーパラメータチューニング、混合重みの最適化など）に新しいCVを使用してから、モデルのトレーニングに古いCVメソッドを使用するのを猫の人も言ってる
+https://www.kaggle.com/c/lish-moa/discussion/195660
+
+層重ねたMLPやresnetでno scored targetの転移学習するとスコア上がるらしいが実現せず。。。
+（TabNetではno scored targetの転移学習効かないらしい）
+https://www.kaggle.com/c/lish-moa/discussion/195932
+https://www.kaggle.com/c/lish-moa/discussion/195859
+
+rankgaussパラメータ100, 1000でやったが効かず。。。
+https://www.kaggle.com/c/lish-moa/discussion/195788
+
+同じ用量と時間の同じ薬が遺伝子と細胞のデータが大きく異なるのはサンプルの個人差のせい
+→私たちの日常生活では、ある個人に効く「薬」が別の人にはうまく効かないことがよくあります
+https://www.kaggle.com/c/lish-moa/discussion/195170
+
+drug_idを特徴量に使う
+https://www.kaggle.com/c/lish-moa/discussion/195380
+
+cvとLBの関係性plot。コントロールなしのMultilabelGroupStratifiedKFoldでの結果
+cv下がればLBも下がってることがわかる
+1位の人のコメント「0.01530前後の新しいCVを持つLB0.01809提出物があります（コントロールグループを含む）」
+→cv下げるの頑張るべき？
+https://www.kaggle.com/c/lish-moa/discussion/197108
+
+public LBにover fitする
+最適化したモデルブレンディングでLB下がらなかったのでCVとLB相関してないと言ってる人もいる
+https://www.kaggle.com/c/lish-moa/discussion/196874
+
+データの増強もおすすめしてる
+https://www.kaggle.com/c/lish-moa/discussion/197654
+
+表形式のデータなのに、
+ニューラルネットワークの方がブースティングモデルよりもパフォーマンスが優れているため、
+この競争は非常に興味深く特別です。
+→理由1
+　データの構造は、ブースティングアルゴリズムに適合していない可能性があります
+　（セルの機能間で順序はそれほど重要ではないようです。
+　　つまり、結果を変更せずに一部のsig_idのcx、cyを並べ替えることができます）
+→理由2
+　1度に206すべてのラベルを使用していない
+　(ニューラルネットは206クラスのマルチラベルで学習できる)
+https://www.kaggle.com/c/lish-moa/discussion/197650
+
+self-stacking + lgbm
+ポジティブサンプル(=1)を多く含むターゲットを最初に学習させる
+oofを保存し、oofの予測値を特徴量として追加することで、ポジティブなサンプル数が少ない学習対象の特徴量を得る
+https://www.kaggle.com/underwearfitting/partial-self-stacking-lightgbm
+
+nonscored入れた方が良くなったらしい
+MultilabelGroupStratifiedKFoldの切り方をsoredを基準にするのしてなかったため
+自分のMLPはnonscored入れた方がcv悪化する
+
+GrowNetはニューラルネットワークでブースティングするモデル（弱学習器として浅いニューラルネットを用いた勾配ブースティングフレームワーク）
+Xgboostより高精度
+このコンペティションでは、ほとんどの人がNNがCVとLBの両方で最高の性能を発揮すると言っていますが、
+他のアルゴリズムはNNほどの性能を発揮しません。
+そのため、勾配ブーストとNNの混合がこのタスクに適しているかもしれません
+https://www.kaggle.com/tmhrkt/grownet-gradient-boosting-neural-networks
+
+マイナークラスは oof 予測があてにならない（訓練データにないときある）からアンサンブルの重み求めるときに過学習しそう
+薬品の違いを区別（あるいは解消）できるような特徴を追加しないとダメみたい
+(by 大堀さん)
+
+moaの日本語解説
+https://www.kaggle.com/takiyu/japanese-moa
+
+少量データ対策の手法で聞いたことまとめておくこと（by 岩田さん 20201117）
+
