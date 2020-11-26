@@ -152,6 +152,38 @@ submission = submission.loc[:, columns]
 0.015242685766185475 : Y_pred_rs.pklなし
 0.015215426124359421 : 全部入り
 ---------------------------------------------------------------
+
+- アンサンブルする予定の notebook
+　- LightGBM
+　　https://www.kaggle.com/anonamename/moa-lgbmclassifier-classifierchain
+　　cv: 0.01680
+　- 5つのMLPとStackedTabNet
+　　https://www.kaggle.com/anonamename/mlp-for-ensemble
+　　moa_MLPs.ipynb
+　　　5l cv:0.01768
+　　　4l cv:0.01765
+　　　3l_v2 cv:0.01597
+　　　2l cv:0.01580
+　　　rs cv:0.01615
+　　tabnetclassifier-fit_StackedTabNet.ipynb 
+　　　StackedTabNet cv: 0.01562
+　- GrowNet
+　　https://www.kaggle.com/anonamename/moa-grownet
+　　cv:0.01592
+
+
+---------------------------------------------------------------
+## ラベルの共起数カウント.共起数の順位をもとにorder指定
+#_co_occ = co_occ.copy()
+#_co_occ.loc[:, _co_occ.columns] = 0
+#n = co_occ.shape[0]
+#for i in range(n):
+#    for j in range(i):
+#        if i == j:
+#            continue
+#        _co_occ.iloc[i,j] = co_occ.iloc[i,j]
+#co_occ = _co_occ
+---------------------------------------------------------------
     
 マイナーな特定クラスだけLGBやSVM,XGboostのモデル作成するとかした方がいいのでは？
 
@@ -226,6 +258,9 @@ https://www.kaggle.com/tmhrkt/grownet-gradient-boosting-neural-networks
 
 moaの日本語解説
 https://www.kaggle.com/takiyu/japanese-moa
+
+PCAについて議論されてる
+https://www.kaggle.com/c/lish-moa/discussion/198898
 
 少量データ対策の手法で聞いたことまとめておくこと（by 岩田さん 20201117）
 

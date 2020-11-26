@@ -1,1 +1,0 @@
-{'feature_fraction': 0.25, 'lambda_l1': 3.34060389323178e-07, 'lambda_l2': 0.00012255072592595102, 'max_depth': 2, 'min_data_in_leaf': 1951, 'num_leaves': 4}
