@@ -1,0 +1,180 @@
+4l	is_del_ctl + scaling	0.0177348	train
+4l	is_conat_nonscore + scaling	0.0167407	train
+4l	is_del_noise_drug + scaling	0.0169992	train
+lr	no feature_eng	0.0201498	train
+2l	no feature_eng	0.0164098	train
+3l	no feature_eng	0.0164497	train
+4l	no feature_eng	0.0164254	train
+5l	no feature_eng	0.0164321	train
+rs	no feature_eng	0.0167401	train
+3l_v2	no feature_eng	0.0165707	train
+3lWN	no feature_eng	0.0187127	train
+stack_tabnet	no feature_eng	0.0170727	train
+tabnet_class	no feature_eng	0.0169266	train
+lr-2l-3l-4l-5l-rs-3l_v2-3lWN-stack_tabnet-tabnet_class	no feature_eng:Mean blend	0.0207735	train
+lr	no feature_eng	0.0201498	inference
+2l	no feature_eng	0.0164098	inference
+3l	no feature_eng	0.0164497	inference
+4l	no feature_eng	0.0164254	inference
+5l	no feature_eng	0.0164321	inference
+rs	no feature_eng	0.0167401	inference
+3l_v2	no feature_eng	0.0165707	inference
+3lWN	no feature_eng	0.0187127	inference
+stack_tabnet	no feature_eng	0.0170727	inference
+tabnet_class	no feature_eng	0.0169266	inference
+lr-2l-3l-4l-5l-rs-3l_v2-3lWN-stack_tabnet-tabnet_class	no feature_eng:Mean blend	0.0207735	inference
+lr	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0186527	train
+2l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0163229	train
+3l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.016373	train
+4l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0163573	train
+5l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0163736	train
+rs	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0167736	train
+3l_v2	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0164841	train
+3lWN	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0184097	train
+stack_tabnet	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0174892	train
+tabnet_class	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0172772	train
+lr-2l-3l-4l-5l-rs-3l_v2-3lWN-stack_tabnet-tabnet_class	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling:Mean blend	0.0208002	train
+rs	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling + seeds=[5, 12, 67]	0.0162722	train
+2l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling + seeds=[5, 12, 67]	0.0162439	train
+4l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling + seeds=[5, 12, 67]	0.0161925	train
+5l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling + seeds=[5, 12, 67]	0.0162111	train
+3l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling + seeds=[5, 12, 67]	0.0161922	train
+stack_tabnet	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling + seeds=[5, 12, 67]	0.0169984	train
+rs-2l-4l-5l-3l-stack_tabnet	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling + seeds=[5, 12, 67]:Mean blend	0.0192757	train
+tabnet_class	no feature_eng + batch_size=8	0.0167243	train
+stack_tabnet	no feature_eng + batch_size=8	0.0166928	train
+tabnet_class	no feature_eng + batch_size=16	0.01672	train
+stack_tabnet	no feature_eng + batch_size=16	0.0166722	train
+tabnet_class	no feature_eng + batch_size=32	0.0168313	train
+stack_tabnet	no feature_eng + batch_size=32	0.0167191	train
+tabnet_class	no feature_eng + batch_size=64	0.016871	train
+stack_tabnet	no feature_eng + batch_size=64	0.0168043	train
+tabnet_class	no feature_eng + batch_size=128	0.0169266	train
+stack_tabnet	no feature_eng + batch_size=128	0.0170727	train
+tabnet_class	no feature_eng + batch_size=256	0.0169572	train
+stack_tabnet	no feature_eng + batch_size=256	0.0171816	train
+tabnet_class	no feature_eng + batch_size=1024	0.0170571	train
+stack_tabnet	no feature_eng + batch_size=1024	0.0174936	train
+tabnet_class	no feature_eng + learning rate=0.1	0.017026	train
+stack_tabnet	no feature_eng + learning rate=0.1	0.0169037	train
+tabnet_class	no feature_eng + learning rate=0.01	0.0168217	train
+stack_tabnet	no feature_eng + learning rate=0.01	0.0168527	train
+tabnet_class	no feature_eng + learning rate=0.0001	0.017057	train
+stack_tabnet	no feature_eng + learning rate=0.0001	0.0173896	train
+tabnet_class	no feature_eng + learning rate=1e-05	0.0194554	train
+stack_tabnet	no feature_eng + learning rate=1e-05	0.0186935	train
+tabnet_class	no feature_eng + num_decision_steps=1	0.0169266	train
+stack_tabnet	no feature_eng + num_decision_steps=1	0.0170727	train
+tabnet_class	no feature_eng + num_decision_steps=2	0.0203953	train
+stack_tabnet	no feature_eng + num_decision_steps=2	0.0196769	train
+tabnet_class	no feature_eng + num_decision_steps=3	0.0199118	train
+stack_tabnet	no feature_eng + num_decision_steps=3	0.0197523	train
+tabnet_class	no feature_eng + num_decision_steps=4	0.0195765	train
+stack_tabnet	no feature_eng + num_decision_steps=4	0.0198399	train
+tabnet_class	no feature_eng + num_decision_steps=8	0.0197219	train
+stack_tabnet	no feature_eng + num_decision_steps=8	0.0205714	train
+tabnet_class	no feature_eng + feature_dim,output_dim=8	0.0176771	train
+stack_tabnet	no feature_eng + feature_dim,output_dim=8	0.0187168	train
+tabnet_class	no feature_eng + feature_dim,output_dim=32	0.0171134	train
+stack_tabnet	no feature_eng + feature_dim,output_dim=32	0.0173601	train
+tabnet_class	no feature_eng + feature_dim,output_dim=64	0.0169299	train
+stack_tabnet	no feature_eng + feature_dim,output_dim=64	0.0170718	train
+tabnet_class	no feature_eng + feature_dim,output_dim=128	0.0169031	train
+stack_tabnet	no feature_eng + feature_dim,output_dim=128	0.0169695	train
+stack_tabnet	no feature_eng + num_layers=1	0.0169266	train
+stack_tabnet	no feature_eng + num_layers=2	0.0170727	train
+stack_tabnet	no feature_eng + num_layers=3	0.0170906	train
+stack_tabnet	no feature_eng + num_layers=4	0.017029	train
+stack_tabnet	no feature_eng + num_layers=5	0.0170164	train
+4l	cliping	0.0163999	train
+4l	cliping ¨ fe_stats	0.0163716	train
+4l	cliping ¨ scaling	0.0163907	train
+4l	cliping ¨ fe_stats ¨ scaling	0.0163949	train
+4l	no feature_eng + seeds=[5, 12]	0.0163159	train
+4l	no feature_eng + p_min=0.001	0.0164733	train
+4l	no feature_eng + p_min=0.0001	0.0164171	train
+4l	no feature_eng + p_min=0.000012	0.0164193	train
+4l	feature_eng: RankGauss	0.0165149	train
+4l	feature_eng: Kmean	0.0164285	train
+4l	feature_eng: c_abs	0.0163416	train
+4l	feature_eng: g_valid	0.0164231	train
+4l	feature_eng: g_abs	0.0165269	train
+4l	feature_eng: g_binary	0.0167199	train
+4l	feature_eng: c_binary	0.0164738	train
+4l	feature_eng: RankGauss ¨ pca ¨ variance_threshold	0.0165233	train
+4l	feature_eng: RankGauss ¨ pca ¨ variance_threshold ¨ Kmean	0.0164885	train
+4l	feature_eng: RankGauss ¨ pca ¨ variance_threshold ¨ Kmean ¨ fe_stats flag_add=False ¨ c_squared	0.0165289	train
+4l	feature_eng: RankGauss ¨ pca ¨ variance_threshold ¨ Kmean ¨ scaling(RobustScaler)¨ fe_stats flag_add=False ¨ c_squared	0.0165337	train
+4l	feature_eng: RankGauss ¨ pca ¨ variance_threshold ¨ Kmean ¨ fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ scaling(RobustScaler)	0.0164938	train
+4l	feature_eng: scaling(RobustScaler)	0.0164137	train
+4l	feature_eng: scaling(StandardScaler)	0.0164159	train
+4l	feature_eng: fe_stats flag_add=True	0.0163853	train
+4l	feature_eng: fe_stats flag_add=False	0.0163984	train
+4l	feature_eng: fe_stats g only	0.016411	train
+4l	feature_eng: fe_stats c only	0.0164204	train
+4l	feature_eng: fe_stats g,c	0.0163709	train
+4l	feature_eng: fe_stats gc only	0.0164131	train
+4l	feature_eng: scaling ¨ fe_stats flag_add=True	0.0163823	train
+4l	no feature_eng + is_del_ctl + is_del_noise_drug	0.0175857	train
+4l	cliping min_clip=0.05, max_clip=0.95	0.016414	train
+4l	fe_clipping_col	0.0164038	train
+4l	fe_clipping_col min_clip=0.05, max_clip=0.95	0.0164248	train
+rs	targets_nonscored + fe_stats flag_add=False ¨ c_squared  ¨ fe_pca ¨ scaling	0.0167092	train
+4l	fe_stats flag_add=False ¨ g_squared ¨ c_squared ¨ fe_pca ¨ scaling	0.0165632	train
+2l	posi_ratio_class_weight	0.0203774	train
+3l	posi_ratio_class_weight	0.0197953	train
+4l	posi_ratio_class_weight	0.0202447	train
+5l	posi_ratio_class_weight	0.0203805	train
+rs	posi_ratio_class_weight	0.0167291	train
+stack_tabnet	posi_ratio_class_weight	0.0193783	train
+tabnet_class	posi_ratio_class_weight	0.0192479	train
+2l-3l-4l-5l-rs-stack_tabnet-tabnet_class	posi_ratio_class_weight:Mean blend	0.0222129	train
+4l	no feature_eng 	0.016403	train
+4l	fe_clipping ¨ fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0163833	train
+4l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling ¨ fe_clipping	0.0163537	train
+2l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling ¨ fe_clipping	0.0162882	train
+3l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling ¨ fe_clipping	0.0163853	train
+4l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling ¨ fe_clipping	0.0163238	train
+5l	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling ¨ fe_clipping	0.0163599	train
+rs	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling ¨ fe_clipping	0.0167596	train
+3l_v2	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling ¨ fe_clipping	0.0164691	train
+stack_tabnet	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling ¨ fe_clipping	0.0175018	train
+tabnet_class	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling ¨ fe_clipping	0.0172945	train
+2l-3l-4l-5l-rs-3l_v2-stack_tabnet-tabnet_class	fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling ¨ fe_clipping:Mean blend	0.020213	train
+stack_tabnet	EPOCHS = 200 + start_predictors ¨ fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0169371	train
+4l	start_predictors ¨ fe_stats flag_add=False ¨ c_squared ¨ c_abs ¨ g_valid ¨ fe_pca ¨ scaling	0.0163121	train
+2l	no feature_eng + learning rate=0.1	0.0162936	train
+3l	no feature_eng + learning rate=0.1	0.0164798	train
+4l	no feature_eng + learning rate=0.1	0.0178934	train
+5l	no feature_eng + learning rate=0.1	0.0183181	train
+rs	no feature_eng + learning rate=0.1	0.0166837	train
+3l_v2	no feature_eng + learning rate=0.1	0.0165591	train
+2l-3l-4l-5l-rs-3l_v2	no feature_eng + learning rate=0.1:Mean blend	0.0195798	train
+2l	no feature_eng + learning rate=0.01	0.016309	train
+3l	no feature_eng + learning rate=0.01	0.0165523	train
+4l	no feature_eng + learning rate=0.01	0.0165061	train
+5l	no feature_eng + learning rate=0.01	0.0164678	train
+rs	no feature_eng + learning rate=0.01	0.0167649	train
+3l_v2	no feature_eng + learning rate=0.01	0.0165326	train
+2l-3l-4l-5l-rs-3l_v2	no feature_eng + learning rate=0.01:Mean blend	0.0194456	train
+2l	no feature_eng + learning rate=0.03	0.0163092	train
+3l	no feature_eng + learning rate=0.03	0.0164412	train
+4l	no feature_eng + learning rate=0.03	0.0165228	train
+5l	no feature_eng + learning rate=0.03	0.0165096	train
+rs	no feature_eng + learning rate=0.03	0.0166166	train
+3l_v2	no feature_eng + learning rate=0.03	0.016581	train
+2l-3l-4l-5l-rs-3l_v2	no feature_eng + learning rate=0.03:Mean blend	0.0194162	train
+2l	no feature_eng + learning rate=0.0001	0.0171018	train
+3l	no feature_eng + learning rate=0.0001	0.0166817	train
+4l	no feature_eng + learning rate=0.0001	0.0167173	train
+5l	no feature_eng + learning rate=0.0001	0.0167891	train
+rs	no feature_eng + learning rate=0.0001	0.0172148	train
+3l_v2	no feature_eng + learning rate=0.0001	0.0166887	train
+2l-3l-4l-5l-rs-3l_v2	no feature_eng + learning rate=0.0001:Mean blend	0.0193497	train
+2l	no feature_eng + learning rate=1e-05	0.6189152	train
+3l	no feature_eng + learning rate=1e-05	0.5011192	train
+4l	no feature_eng + learning rate=1e-05	0.0333502	train
+5l	no feature_eng + learning rate=1e-05	0.0421744	train
+rs	no feature_eng + learning rate=1e-05	0.0678956	train
+3l_v2	no feature_eng + learning rate=1e-05	0.0174277	train
+2l-3l-4l-5l-rs-3l_v2	no feature_eng + learning rate=1e-05:Mean blend	0.0381998	train

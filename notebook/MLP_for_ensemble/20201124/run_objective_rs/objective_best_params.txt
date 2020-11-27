@@ -1,0 +1,1 @@
+{'activation0': 'selu', 'activation1': 'selu', 'activation2': 'selu', 'activation3': 'selu', 'activation4': 'selu', 'activation5': 'selu', 'activation6': 'relu', 'activation7': 'selu', 'dense0': 369, 'dense1': 939, 'dense2': 696, 'dense3': 970, 'dense4': 887, 'dense5': 991, 'drop_rate0': 0.777298030070047, 'drop_rate1': 0.6033124455518569}

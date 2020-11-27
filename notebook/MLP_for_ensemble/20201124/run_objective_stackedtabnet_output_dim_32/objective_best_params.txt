@@ -1,0 +1,1 @@
+{'Na': 2048, 'gamma': 1.2, 'lambda_sparse': 0.01}

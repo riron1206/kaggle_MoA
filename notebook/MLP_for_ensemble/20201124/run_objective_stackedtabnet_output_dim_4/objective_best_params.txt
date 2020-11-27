@@ -1,0 +1,1 @@
+{'Na': 128, 'batch_momentum': 0.9, 'gamma': 1.5, 'lambda_sparse': 0.01, 'norm_type': 'batch', 'num_groups': -1}

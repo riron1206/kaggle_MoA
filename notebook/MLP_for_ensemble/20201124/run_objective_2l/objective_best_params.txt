@@ -1,0 +1,1 @@
+{'activation': 'relu', 'dense0': 1150, 'dense1': 1371, 'drop_rate0': 0.19506281094918945, 'drop_rate1': 0.22193390554785974, 'drop_rate2': 0.7161410458761702, 'sync_period': 38}

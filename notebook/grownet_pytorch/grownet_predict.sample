@@ -1,0 +1,207 @@
+from enum import Enum
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+from torch.utils.data import DataLoader, Dataset
+
+
+class TestDataset:
+    def __init__(self, features):
+        self.features = features
+
+    def __len__(self):
+        return self.features.shape[0]
+
+    def __getitem__(self, idx):
+        dct = {"x": torch.tensor(self.features[idx, :], dtype=torch.float)}
+        return dct
+
+
+# Dynamic Model
+class ForwardType(Enum):
+    SIMPLE = 0
+    STACKED = 1
+    CASCADE = 2
+    GRADIENT = 3
+
+
+class DynamicNet(object):
+    def __init__(self, c0, lr):
+        self.models = []
+        self.c0 = c0
+        self.lr = lr
+        self.boost_rate = nn.Parameter(
+            torch.tensor(lr, requires_grad=True, device=device)
+        )
+
+    def add(self, model):
+        self.models.append(model)
+
+    def parameters(self):
+        params = []
+        for m in self.models:
+            params.extend(m.parameters())
+
+        params.append(self.boost_rate)
+        return params
+
+    def zero_grad(self):
+        for m in self.models:
+            m.zero_grad()
+
+    def to_cuda(self):
+        for m in self.models:
+            m.cuda()
+
+    def to_eval(self):
+        for m in self.models:
+            m.eval()
+
+    def to_train(self):
+        for m in self.models:
+            m.train(True)
+
+    def forward(self, x):
+        if len(self.models) == 0:
+            batch = x.shape[0]
+            c0 = np.repeat(self.c0.detach().cpu().numpy().reshape(1, -1), batch, axis=0)
+            c0 = torch.Tensor(c0).cuda() if device == "cuda" else torch.Tensor(c0)
+            return None, c0
+        middle_feat_cum = None
+        prediction = None
+        with torch.no_grad():
+            for m in self.models:
+                if middle_feat_cum is None:
+                    middle_feat_cum, prediction = m(x, middle_feat_cum)
+                else:
+                    middle_feat_cum, pred = m(x, middle_feat_cum)
+                    prediction += pred
+        return middle_feat_cum, self.c0 + self.boost_rate * prediction
+
+    def forward_grad(self, x):
+        if len(self.models) == 0:
+            batch = x.shape[0]
+            c0 = np.repeat(self.c0.detach().cpu().numpy().reshape(1, -1), batch, axis=0)
+            return None, torch.Tensor(c0).cuda()
+        # at least one model
+        middle_feat_cum = None
+        prediction = None
+        for m in self.models:
+            if middle_feat_cum is None:
+                middle_feat_cum, prediction = m(x, middle_feat_cum)
+            else:
+                middle_feat_cum, pred = m(x, middle_feat_cum)
+                prediction += pred
+        return middle_feat_cum, self.c0 + self.boost_rate * prediction
+
+    @classmethod
+    def from_file(cls, path, builder):
+
+        if device == "cuda":
+            d = torch.load(path)
+        else:
+            d = torch.load(path, map_location=torch.device("cpu"))
+
+        net = DynamicNet(d["c0"], d["lr"])
+        net.boost_rate = d["boost_rate"]
+        for stage, m in enumerate(d["models"]):
+            submod = builder(stage)
+            submod.load_state_dict(m)
+            net.add(submod)
+        return net
+
+    def to_file(self, path):
+        models = [m.state_dict() for m in self.models]
+        d = {
+            "models": models,
+            "c0": self.c0,
+            "lr": self.lr,
+            "boost_rate": self.boost_rate,
+        }
+        torch.save(d, path)
+
+
+# Weak Models
+class MLP_2HL(nn.Module):
+    def __init__(self, dim_in, dim_hidden1, dim_hidden2, sparse=False, bn=True):
+        super(MLP_2HL, self).__init__()
+        self.bn2 = nn.BatchNorm1d(dim_in)
+
+        self.layer1 = nn.Sequential(
+            nn.Dropout(0.2),
+            nn.Linear(dim_in, dim_hidden1),
+            nn.ReLU(),
+            nn.BatchNorm1d(dim_hidden1),
+            nn.Dropout(0.4),
+            nn.Linear(dim_hidden1, dim_hidden2),
+        )
+        self.layer2 = nn.Sequential(
+            nn.ReLU(),
+            nn.Linear(dim_hidden2, n_classes),
+        )
+
+    def forward(self, x, lower_f):
+        if lower_f is not None:
+            x = torch.cat([x, lower_f], dim=1)
+            x = self.bn2(x)
+        middle_feat = self.layer1(x)
+        out = self.layer2(middle_feat)
+        return middle_feat, out
+
+    @classmethod
+    def get_model(cls, stage, params):
+        if stage == 0:
+            dim_in = params["feat_d"]
+        else:
+            dim_in = params["feat_d"] + params["hidden_size"]
+        model = MLP_2HL(dim_in, params["hidden_size"], params["hidden_size"])
+        return model
+
+
+def pred_grownet(X, i, j):
+
+    params = {
+        "batch_size": 256,
+        "hidden_size": 512,
+        "feat_d": 873,
+    }
+
+    test_ds = TestDataset(X)
+    test_loader = DataLoader(
+        test_ds, batch_size=params["batch_size"], shuffle=False
+    )
+
+    net_ensemble = DynamicNet.from_file(
+        f"../input/moa-grownet/{j}FOLD_{i}_.pth",
+        lambda stage: MLP_2HL.get_model(
+            stage, {"feat_d": params["feat_d"], "hidden_size": params["hidden_size"]}
+        ),
+    )
+    net_ensemble.to_eval()
+
+    preds = []
+    with torch.no_grad():
+        for data in test_loader:
+            x = data["x"].to(device)
+            _, pred = net_ensemble.forward(x)
+            preds.append(pred.sigmoid().detach().cpu().numpy())
+
+    return np.concatenate(preds)
+
+
+# ------------ 動作確認 ------------
+denominator = counts.sum(axis=0)
+counts /= denominator
+
+_, n_models = weights.shape
+Y_preds = np.zeros((n_models, test_size, n_classes))
+
+device = "cuda" if torch.cuda.is_available() else "cpu"  # 必須。cpu/gpuどっち使うかグローバル変数で管理
+for i in range(n_seeds):
+    for j in range(n_splits):
+
+        Y_preds[1] += counts[i * n_splits + j] * pred_grownet(X_test_clipped.values, i, j)
+
+print(Y_preds[1])
+# --------------------------------
