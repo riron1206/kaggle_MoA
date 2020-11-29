@@ -39,37 +39,37 @@
 - コンペ概要日本語訳: https://www.kaggle.com/furuhatakazuki/japanese-moa-introduction
 
 -------------------------------------
-### 作業ログ
+## 作業ログ
 - https://github.com/riron1206/kaggle_MoA/issues/2
 - https://trello.com/b/lHvX528J/kagglemoa
 
 -------------------------------------
-### 最終submitはチームでのアンサンブル
+## 最終submitはチームでのアンサンブル
 - https://www.kaggle.com/yxohrxn/votingclassifier-fit
 - https://www.kaggle.com/yxohrxn/votingclassifier-predict
 
 -------------------------------------
-### 自分が作ったモデル
-#### 2クラス分類のLightGBM
+## 自分が作ったモデル
+### 2クラス分類のLightGBM
 - cv: 0.01608
 - https://www.kaggle.com/anonamename/moa-lightgbm
 
-#### LGBMClassifier + ClassifierChain
+### LGBMClassifier + ClassifierChain
 - cv: 0.01661
 - https://www.kaggle.com/anonamename/moa-lgbmclassifier-classifierchain
 
-#### XGBClassifier + ClassifierChain
+### XGBClassifier + ClassifierChain
 - cv: 0.01621, auc: 0.5581
 - https://www.kaggle.com/anonamename/moa-xgbclassifier-classifierchain
     
-#### Self-Stacking + 2クラス分類のXGBoost
+### Self-Stacking + 2クラス分類のXGBoost
 - cv: 0.01603, auc: 0.7559
 - ※第1段階の予測値を第2段階の学習の追加特徴量とし、クラス間の関係性を学習させる。陽性ラベル(=1)が多いクラスを最初に学習してoof出し(第1段階目)、そのoofを特徴量に追加して残りの陽性ラベル少ないクラス学習
 - 学習に9時間以上かかったのでローカルで実行した結果をDatasetsにuploadした: https://www.kaggle.com/anonamename/moaselfstackingxgboost
 - 学習コード: https://www.kaggle.com/anonamename/moa-self-stacking-xgboost?scriptVersionId=47884299
 - 予測コード: https://www.kaggle.com/anonamename/moa-self-stacking-xgboost-calibrate?scriptVersionId=47996842 のIn[20],In[21],In[22]
 
-#### cuml + 2クラス分類のSVM
+### cuml + 2クラス分類のSVM
 - cv: 0.01625
 - ※rapidsのSVMは1seed分しか保存できない。kaggleは出力ファイルを20GBまでしか保存できないため。5seed分作るためnotebook分けた
 - https://www.kaggle.com/anonamename/moa-rapids-svm-seed-y-pred
@@ -77,17 +77,17 @@
 - https://www.kaggle.com/anonamename/fork-of-moa-rapids-svm-seed23
 - https://www.kaggle.com/anonamename/fork-of-moa-rapids-svm-seed4
     
-#### 遺伝的アルゴリズム + cuml + KNN
+### 遺伝的アルゴリズム + cuml + KNN
 - cv: 0.01909（np.clip(oof,0.0005,0.999) + ctl行=0 にしたら cv: 0.01865）
 - ※特徴量をスケーリングする重みを遺伝的アルゴリズムで計算し、cumlのKNNでマルチラベル分類する
 - https://www.kaggle.com/anonamename/moa-genetic-algorithm-cuml-knn
 
-#### DummyClassifier + MultiOutputClassifier
+### DummyClassifier + MultiOutputClassifier
 - cv: 0.02105
 - ※DummyClassifierは特徴量を学習データに使わず、ラベルの確率分布を再現するルールベースのモデル。ランダムに出力してもこれくらいの精度になるらしい
 - https://www.kaggle.com/anonamename/moa-dummyclassifier-multioutputclassifier
 
-#### MLP(層の数変えた5種類のMLPのアンサンブル)
+### MLP(層の数変えた5種類のMLPのアンサンブル)
 - cv: 0.01718, LB: 0.01861
 - 学習コード: https://www.kaggle.com/anonamename/moa-dnn-feature-engineering-20201023-re-cv
 - 予測コード: https://www.kaggle.com/anonamename/submission-moa-dnn-moa-code-20201104-v2?scriptVersionId=46198226
@@ -98,7 +98,7 @@
     - 2l   : cv: 0.01572, auc: 0.67610
     - rs   : cv: 0.01588, auc: 0.67808
 
-#### StackedTabNet
+### StackedTabNet
 - cv: , auc: 
 - ※決定木(GBMT)をDNNで模倣したモデル。Encode(FC=>BN=>GLU(ゲート付き線形変換) + transformer。特徴量をEncodeしてtransformerに入れるのを繰り返す構造。RNNっぽい（時系列っぽく）何回もtransformerに入れる
 - https://www.kaggle.com/anonamename/moa-stackedtabnet-fit
@@ -107,7 +107,7 @@
 - 自分のハイスコアモデル
     - ローカルでの実行notebook: https://github.com/riron1206/kaggle_MoA/blob/master/notebook/2000_MLP_for_ensemble/kaggle_upload/moa_MLPs_StackedTabNet_only.ipynb
 
-#### GrowNet
+### GrowNet
 - cv: 0.01589
 - ※1,2層程度の浅いMLPを弱モデルとしてブースティング。浅いMLPを1epoch学習→最終層の出力を特徴量列に追加→浅いMLPを1epoch学習→… を繰り返す
 - https://www.kaggle.com/anonamename/moa-grownet
