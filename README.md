@@ -48,7 +48,8 @@
 - https://www.kaggle.com/yxohrxn/votingclassifier-fit
 - https://www.kaggle.com/yxohrxn/votingclassifier-predict
 
-#### 自分が作ったモデル
+-------------------------------------
+### 自分が作ったモデル
 - 2クラス分類のLightGBM
     - cv: 0.01608
     - https://www.kaggle.com/anonamename/moa-lightgbm
