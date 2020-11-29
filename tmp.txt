@@ -187,6 +187,69 @@ submission = submission.loc[:, columns]
     
 マイナーな特定クラスだけLGBやSVM,XGboostのモデル作成するとかした方がいいのでは？
 
+---------------------------------------------------------------
+新たに作ったモデルです
+cv良くない + 時間もないのでアンサンブルに入れない方がよさそうですが一応展開しておきます
+
+- self-stacking-xgboost
+https://www.kaggle.com/anonamename/moaselfstackingxgboost
+cv: 0.01603, auc: 0.7559
+学習は9時間以上かかったのでローカルで実行した結果をDatasetsにuploadしました
+学習コードは
+https://www.kaggle.com/anonamename/moa-self-stacking-xgboost?scriptVersionId=47884299
+予測コードは
+https://www.kaggle.com/anonamename/moa-self-stacking-xgboost-calibrate?scriptVersionId=47996842
+のIn[20],In[21],In[22]です
+※マルチラベルではなくターゲットごとの2クラス分類
+※第1段階の予測値を第2段階の学習の追加特徴量とし、クラス間の関係性を学習させる
+　陽性ラベル(=1)が多いクラスを最初に学習してoof出し(第1段階目)、そのoofを特徴量に追加して残りの陽性ラベル少ないクラス学習
+
+
+- XGBClassifier + ClassifierChain
+https://www.kaggle.com/anonamename/moa-xgbclassifier-classifierchain
+cv: 0.01621, auc: 0.5581
+
+
+- 遺伝的アルゴリズム+ cuml + KNN
+https://www.kaggle.com/anonamename/moa-genetic-algorithm-cuml-knn?scriptVersionId=47985408
+cv: 0.01915
+（np.clip(oof,0.0005,0.999) + ctl行=0 にしたら cv: 0.01866）
+※Y_pred.pkl出し忘れたので再実行中
+
+
+- DummyClassifier + MultiOutputClassifier
+https://www.kaggle.com/anonamename/moa-dummyclassifier-multioutputclassifier
+cv: 0.02105
+※DummyClassifierは特徴量を学習データに使わず、ラベルの確率分布を再現するルールベースのモデル
+　ランダムに出力してもこれくらいの精度になるらしい
+
+
+---------------------------------------------------------------
+TabNet-TF はNa(feature_dim)を論文の探索範囲よりもかなり大きくすると良さそうでした
+https://www.kaggle.com/yxohrxn/tabnetclassifier-fit
+とほぼ同じ処理を(自分はstacked tabnetを使ってます)
+stacked_tabnet_params = dict(
+    epsilon=1e-05,
+    feature_columns=None,
+    virtual_batch_size=None,
+    num_layers=2,
+    num_decision_steps=1,
+    norm_type="batch",
+    num_groups=-1,
+    batch_momentum=0.9,
+    relaxation_factor=1.2,
+    sparsity_coefficient=0.0001,
+    feature_dim=2560,  # Na
+    output_dim=128,    # Nd
+)
+batch_size=128（batch_size小さくした方がいいが、8にすると時間かかりすぎるため128にしてる）
+のパラメで
+cv: 0.015609, auc: 0.68547
+
+pytorch版でも同じかわからないですがNaを大きくするの試してみてもいいかも…
+
+---------------------------------------------------------------
+
 MLP + ClassifierChain みたいな方法のGrowNetっていうのあるんですね
 https://www.kaggle.com/c/lish-moa/discussion/196436
 
