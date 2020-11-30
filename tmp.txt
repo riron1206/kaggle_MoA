@@ -257,11 +257,42 @@ vote.fitとvote.predictのinputを更新したら使えます
 暫定のアンサンブルに採用されてるrs のcv は0.016158→0.015888 に改善
 （モデル変わってLB悪化しないといいが）
 
-
+predictの時間に余裕あるなら
+lightgbmよりself-stacking-xgboostを使った方がいいかもです（xgbは時間かかる）
+cvもaucもxgbの方が若干良いので
+oofにfitしてるだけなのかもですが
+moa-lightgbm cv: 0.01608, auc: 0.73209
+moa-self-stacking-xgboost cv: 0.01603, auc: 0.75597
 
 * beta_1 を 0.75-0.85 位に設定するとスコアが改善
+---------------------------------------------------------------
+
+LB上位の方は
+- 何かしらの後処理
+- private test 含めたPCAによるリーク
+でshake upするようなこと言ってますね。。。
+後処理は予測値クリップ以外になんかあるのかなあ
+https://www.kaggle.com/c/lish-moa/discussion/200087
 
 ---------------------------------------------------------------
+fold averagingで作成した疑似ラベルを追加して各foldを再学習するとリークする！！！
+fold1で作成した疑似ラベルをfold1に追加して再学習はリークなし！！！
+https://www.kaggle.com/c/lish-moa/discussion/192410#1083433
+
+---------------------------------------------------------------
+
+2クラス分類GBDTで各クラスのチューニングをバチバチに頑張ったらMLPに勝てたのかなあ
+
+svm と lightgbm の validation strategy や前処理、予測時の処理について最終チェックをお願いできますか？
+
+svm と lightgbm チェックしました。vote.fit, vote.predict との不整合無かったです
+
+以前指摘された1e-15 の記述が残っていたので、Fork of moa_RAPIDS_SVM_seed23 を再実行してますが、
+モデルのパラメータなどは一切変更してのでモデルの精度が変わることはないです
+（モデルファイルに関係ないとこだから再実行しなくてよかったのに…無駄なことした）
+
+---------------------------------------------------------------
+
 MLP + ClassifierChain みたいな方法のGrowNetっていうのあるんですね
 https://www.kaggle.com/c/lish-moa/discussion/196436
 
