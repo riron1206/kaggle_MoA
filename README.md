@@ -103,7 +103,7 @@
 - ※決定木(GBMT)をDNNで模倣したモデル。Encode(FC=>BN=>GLU(ゲート付き線形変換) + transformer。特徴量をEncodeしてtransformerに入れるのを繰り返す構造。RNNっぽい（時系列っぽく）何回もtransformerに入れる
 - https://www.kaggle.com/anonamename/moa-stackedtabnet-fit
 - パラメーターチューニングしたローカルでの実行結果: https://www.kaggle.com/anonamename/mlp-for-ensemble
-    - StackedTabNet: cv: 0.01559, auc: 0.68344
+    - StackedTabNet: cv: 0.015597, auc: 0.68344
 - 自分のハイスコアモデル
     - ローカルでの実行notebook: https://github.com/riron1206/kaggle_MoA/blob/master/notebook/2000_MLP_for_ensemble/kaggle_upload/moa_MLPs_StackedTabNet_only.ipynb
 
