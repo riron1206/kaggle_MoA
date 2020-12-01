@@ -138,6 +138,12 @@
     - オリジナルの特徴量+1段目モデルの予測値を2段目モデルの入力にしてスタッキングしてる。スタッキングでprivate LB 0.00001 下がってる
     - MLPの単純平均のアンサンブルだけでprivate LB 0.00002 も下がってる
     - https://www.kaggle.com/c/lish-moa/discussion/200630
+    
+- 30位の解法
+    - 4つのモデルの平均的なブレンド
+    - 後処理として、[1e-5; 1-1e-5]のクリッピング
+    - lr = 1e-5とSGDオプティマイザーでPseudo Labelling効いたみたい（学習率下げたら効いたのかな？）
+    - https://www.kaggle.com/c/lish-moa/discussion/200679
 
 - コンペ中ずっと1位だった猫の解法(private LBは560位)
     - oofでモデルブレンディングの重み最適化してる。最適化後、MultilabelStratifiedKFoldで1から学習してる（我々のチームのようにscipyで最適化すれば1回ですむのに）
