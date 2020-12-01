@@ -152,9 +152,9 @@
         - test setの各ラベルの平均はわからないから、モデルの予測値がほぼ0のクラスは全ラベルの平均値に近づけるようにした
     - https://www.kaggle.com/c/lish-moa/discussion/200614
 
-- マイナークラスの行を単純に増やすだけでLB 0.0003 - 0.0004上がるらしい
-    - ポジティブサンプルが10個未満のクラスの行を4倍にする
-    - https://www.kaggle.com/c/lish-moa/discussion/200600
+### マイナークラスの行を単純に増やすだけでLB 0.0003 - 0.0004上がるらしい
+- ポジティブサンプルが10個未満のクラスの行を4倍にする
+- https://www.kaggle.com/c/lish-moa/discussion/200600
     
     
     
