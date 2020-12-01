@@ -117,5 +117,13 @@
 - https://github.com/riron1206/kaggle_MoA/issues/2
 - https://trello.com/b/lHvX528J/kagglemoa
 
+-------------------------------------
+## 上位解法
+- 5位の解法
+    - 既知の薬にはMultilabelStratifiedKFold, 未知の薬にはMultilabelStratifiedGroupKFold を使う
+    - https://www.kaggle.com/c/lish-moa/discussion/200533
+    - https://twitter.com/nejumi_dqx/status/1333563354468601856
 
-
+- コンペ中ずっと1位だった猫の解法
+    - 我々と同じようにモデルブレンディング。選んだサブミットが悪かったみたいだが一番スコアでも銀圏
+    - https://www.kaggle.com/c/lish-moa/discussion/200338
