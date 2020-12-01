@@ -45,7 +45,7 @@
     - private LB: 0.01608 : https://www.kaggle.com/yxohrxn/votingclassifier-predict-without-postprocessing?scriptVersionId=48221736
     - private LB: 0.01611 : https://www.kaggle.com/yxohrxn/votingclassifier-predict?scriptVersionId=48129549
     - 一番性能良かったのは別の方が作ったpretrain tabnet-pytorch
-    - 採用された自分のモデルは StackedTabNet, MLP-rs。private LB 低い方のサブではStackedTabNet, moa-lightgbm, SVM が採用された
+    - 採用された自分のモデルは StackedTabNet, MLP-rs。private LB 悪い方のサブではStackedTabNet, moa-lightgbm, SVM が採用された
 - アンサンブル重み計算: https://www.kaggle.com/yxohrxn/votingclassifier-fit
 
 -------------------------------------
