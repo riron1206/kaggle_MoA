@@ -157,5 +157,21 @@
 - ポジティブサンプルが10個未満のクラスの行を4倍にする
 - https://www.kaggle.com/c/lish-moa/discussion/200600
     
-    
+### TabNetだけでpublic LB = 0.01833だしたらしいパラメ
+```
+n_d = 32
+n_a = 256
+n_steps = 1
+gamma = 1.5
+lambda_sparse = 1e-7
+LEARNING_RATE = 8e-3
+wd = 1e-5
+div_factor = 10
+EPOCHS = 500
+BATCHSIZE = 248
+GBATCHSIZE = 64
+n_independent= 1
+n_shared = 0 
+```
+- https://www.kaggle.com/c/lish-moa/discussion/200649
     
