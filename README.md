@@ -50,6 +50,7 @@
     - 採用された自分のモデルは StackedTabNet, MLP-rs。private LB 悪い方のサブではStackedTabNet, moa-lightgbm, SVM が採用された
 - クラスごとのアンサンブル重み計算: https://www.kaggle.com/yxohrxn/votingclassifier-fit
 
+![moa_pipeline](https://github.com/riron1206/kaggle_MoA/moa_pipeline.jpg)
 -------------------------------------
 ## 自分が作ったモデル
 ### 2クラス分類のLightGBM
