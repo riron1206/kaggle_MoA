@@ -123,13 +123,38 @@
 ## 上位解法
 - 5位の解法
     - 既知の薬にはMultilabelStratifiedKFold, 未知の薬にはMultilabelStratifiedGroupKFold を使う
+    - L2 Softmax-> コサイン類似度で既知未知を分類したらしいがよくわからん
     - https://www.kaggle.com/c/lish-moa/discussion/200533
     - https://twitter.com/nejumi_dqx/status/1333563354468601856
 
 - 14位の解法
-    - スタッキングモデルを含め、これら6つのモデルすべてをブレンド
+    - スタッキングモデルを含め、TabNetなどの6つのモデルすべてをブレンド
+    - テストセット用のnon scored targetsを作成するモデルを作成している（よくわからん）
     - https://www.kaggle.com/c/lish-moa/discussion/200585
 
-- コンペ中ずっと1位だった猫の解法
-    - 我々と同じようにモデルブレンディング。選んだサブミットが悪かったみたいだが一番良いスコアでも銀圏
+- 27位の解法
+    - 26個のMLPのアンサンブル（TabNetなし）
+    - オリジナルの特徴量+1段目モデルの予測値を2段目モデルの入力にしてスタッキングしてる。スタッキングでprivate LB 0.00001 下がってる
+    - 26個のMLPの単純平均のアンサンブルだけでprivate LB 0.00002 も下がってる
+    - https://www.kaggle.com/c/lish-moa/discussion/200630
+
+- コンペ中ずっと1位だった猫の解法(private LBは560位)
+    - oofでモデルブレンディングの重み最適化してる。最適化後、MultilabelStratifiedKFoldで1から学習してる（我々のチームのようにscipyで最適化すれば1回ですむのに）
+    - 予測値0.0014/0.99を超えるサンプルをバイナリラベルに置換する後処理はprivate LBで効果あったみたい
+    - Pseudo Labellingも使ってるがよくわからん
+    - 選んだサブミットが悪かったみたいだが一番良いスコアでも銀圏
     - https://www.kaggle.com/c/lish-moa/discussion/200338
+
+- コンペ中3位の解法(private LBは118位)
+    - cvではなくLBを信じたためshake downした
+    - NVIDIA RAPIDS UMAPで画像にした DeepInsight などのモデルブレンド
+    - test setの分布がtrain setとは異なると予測（trainで全然ないターゲットがtestで頻繁に発生する可能性）
+        - test setの各ラベルの平均はわからないから、モデルの予測値がほぼ0のクラスは全ラベルの平均値に近づけるようにした
+    - https://www.kaggle.com/c/lish-moa/discussion/200614
+
+- マイナークラスの行を単純に増やすだけでLB 0.0003 - 0.0004上がるらしい
+    - ポジティブサンプルが10個未満のクラスの行を4倍にする
+    - https://www.kaggle.com/c/lish-moa/discussion/200600
+    
+    
+    
