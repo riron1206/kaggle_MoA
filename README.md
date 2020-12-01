@@ -98,7 +98,7 @@
     - 4l   : cv: 0.01591, auc: 0.66564
     - 3l_v2: cv: 0.01576, auc: 0.68225
     - 2l   : cv: 0.01572, auc: 0.67610
-    - rs   : cv: 0.01588, auc: 0.67808
+    - rs(2 head resnet)   : cv: 0.01588, auc: 0.67808
 
 ### StackedTabNet
 - cv: , auc: 
