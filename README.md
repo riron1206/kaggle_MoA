@@ -41,11 +41,12 @@
 
 -------------------------------------
 ## 最終submitはチームでのアンサンブル（35位）
-- 最終サブ: https://www.kaggle.com/yxohrxn/votingclassifier-predict-without-postprocessing?scriptVersionId=48221736
+- 最終サブ: 
     - LB高くかつアンサンブルするモデルが多いのと少ないのの2つを選択した
-    - private LB: 0.01608
+    - private LB: 0.01608 : https://www.kaggle.com/yxohrxn/votingclassifier-predict-without-postprocessing?scriptVersionId=48221736
+    - private LB: 0.01608 : https://www.kaggle.com/yxohrxn/votingclassifier-predict?scriptVersionId=48129549
     - 一番性能良かったのは別の方が作ったpretrain tabnet-pytorch
-    - 採用された自分のモデルは StackedTabNet, MLP-rs。private LB 低い方のサブでは moa-lightgbm, SVM も採用された
+    - 採用された自分のモデルは StackedTabNet, MLP-rs。private LB 低い方のサブではStackedTabNet, moa-lightgbm, SVM が採用された
 - アンサンブル重み計算: https://www.kaggle.com/yxohrxn/votingclassifier-fit
 
 -------------------------------------
