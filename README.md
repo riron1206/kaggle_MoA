@@ -158,6 +158,7 @@
 - https://www.kaggle.com/c/lish-moa/discussion/200600
     
 ### TabNetだけでpublic LB = 0.01833だしたらしいパラメ
+- https://www.kaggle.com/c/lish-moa/discussion/200649
 ```
 n_d = 32
 n_a = 256
@@ -173,5 +174,3 @@ GBATCHSIZE = 64
 n_independent= 1
 n_shared = 0 
 ```
-- https://www.kaggle.com/c/lish-moa/discussion/200649
-    
