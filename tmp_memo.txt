@@ -8,316 +8,302 @@ $ git push origin HEAD:master
 ```
 -------------------------------------
 
-@syokoi gaussian noise, cutout, mixup, cutmix の実験はスキップしてください
-新しい validation strategy で cutmix を実験したところ、resnet、tabnet ともに cv score が改善しました
+■20201030 共有会
+cvの過学習あるので、LBに効くcvの値を把握していけばいいんでない。上位はcv=0.015-0.016台でいけてるので OTさん
+
+RANK ガウスはMLPと相性いいらしい OTさん
+
+nonscored で学習→予測値を特徴に追加→scored を学習でやりたい OHさん
+
+nonscoredも予測ラベルに入れてMLP作ればマルチタスクでうまくいくかも OTさん
+
+nonscored targetのclass_weightを減らして学習させる方がいいと思う Aさん
+
+画像化がうまくできるならCNNはいいと思う。今のところそんなのないが OTさん
+
+DeepInsightより、Auto encoderで2次元化した画像でやる方がいいと思う OTさん
+
+ラベルは阻害剤とほかのなんかの種類が多い Nさん
+
+ラベルの種類でMLPの出力層2股にわけるとか、阻害剤とそれ以外とか OTさん
+
+ラベルの間の相関得るため、RNNやClassifierChain がいいでは OHさん
+
+RNN よりLSTMのがいいだろう。LSTMよりTransfomerのがいいだろ。じゃあTabNetじゃん OTさん
+
+最終のサブは
+①1サブは推論のみでアンサンブルしまくるサブ
+?train+推論のサブ
+でいく
 
 
-old cv: 0.01419
-new cv: 0.01559
+■20201106聞くこと
+to OH
+クラスごとのブレンドの重みはどうやって決めている？
+ネルダーミードだと非常に遅いためクラスごとにやるのはきびしい
+→ scipy.optimize.minimize_scalar なら早くできる
 
+to N
+CatBoost＋add target
+⇒scored target を分類し、そのラベルのOOF予測値を追加
+はどういうこと？
+→阻害剤とかのクラス追加してモデル作成したってこと
 
-X, Y, Y_nonscored, train_features, columns, groups, X_test = load_data()
+to A
+DeepGBM ってなに？↓これ？
+http://yh0sh.hateblo.jp/
 
-X = train_features.copy()
-cp_type = {"trt_cp": 0, "ctl_vehicle": 1}
-cp_dose = {"D1": 0, "D2": 1}
-for _X in [X, X_test]:
-    _X["cp_type"] = _X["cp_type"].map(cp_type)
-    _X["cp_dose"] = _X["cp_dose"].map(cp_dose)
-X = X.select_dtypes("number")
-display(X.head())
+to OT
+tabnetのpretrainingって何してるの？論文読めという話かもですが。。。
 
-X, Y, Y_nonscored = preprocess(X, Y, Y_nonscored)
-train_size, n_features = X.shape
-_, n_classes_nonscored = Y_nonscored.shape
-_, n_classes = Y.shape
+チーム参加しました。コードとか
 
-display(X.head())
-
-out_dir = out_base_dir
-
-print(f"cp_type + cp_dose")
-#oof_loss = train_and_evaluate()
-print("-" * 100)
-
-
-
-    preprocess_params={
-        "is_clip": True,
-        "is_stat": True,
-        "is_add_nonscored": True,
-        "is_c_squared": False,
-        "is_c_abs": False,
-        "is_g_valid": False,
-        "pca_n_components_g": 0,
-        "pca_n_components_c": 0,
-        "is_scaling": False,
-    },
-
-
-
-1. MLPClassifier.fit を fork する
-→持ってきた
-2. validation strategy を決定する
-→デフォルトのパラメつかyがバッチサイズとエポック数を変更したのをvanilla とした
-
-3. 一部の実験を vanilla の状態から再実施する
-  - activation, bn, dropout の順序
-  - gaussian noise, cutout, mixup, cutmix
-  - weight normalization の有無
-  - cp_type と cp_dose の有無
-  - ClippedFeatures, QuantileTransformer 等の前処理
-  - PCA features, RowStatistics 等の特徴エンジニアリング
-  - ctl_vehicle 行の削除
-4. optuna でチューニングする
-
-
-ラグランジュの未定乗数法で双対問題に変換
-
-
-https://machinelearningmastery.com/calibrated-classification-model-in-scikit-learn/
-        # calibrate model on validation data
-        calibrator = CalibratedClassifierCV(clf, cv='prefit')
-        calibrator.fit(X_val, Y_val)
-        val_preds = calibrator.predict(X_val)
-        print(val_preds)
-        print(val_preds.shape)
-        
-        val_preds = np.array(val_preds)[:,:,1].T # take the positive class
-        print(val_preds.shape)
-        
-        
-        
----------------------------------------------------------------
-def calibrate_Y_pred(X_new: np.ndarray):
-    """
-    predict_probaでだしたY_predをロジスティク回帰で確率に補正する
-    Args:
-        X_new: predict_probaでだしたY_pred.values
-    """
-    
-    counts = np.empty((n_classes))
-
-    Y_cali = np.zeros((train_size, n_classes))
-    Y_cali = pd.DataFrame(Y_cali, columns=Y.columns, index=Y.index)
-
-    for tar in tqdm(range(Y.shape[1])):
-        
-        targets = Y.values[:, tar]
-        X_targets = X_new[:, tar]
-        counts[tar] = targets.sum()
-
-        if targets.sum() >= n_splits:
-
-            skf = StratifiedKFold(n_splits=n_splits, random_state=0, shuffle=True)
-
-            for n, (tr, te) in enumerate(skf.split(targets, targets)):
-                x_tr, x_val = X_targets[tr].reshape(-1, 1), X_targets[te].reshape(-1, 1)
-                y_tr, y_val = targets[tr], targets[te]
-
-                model = LogisticRegression(penalty="none", max_iter=1000)
-                model.fit(x_tr, y_tr)
-                Y_cali[Y.columns[tar]].iloc[te] += model.predict_proba(x_val)[:, 1]
-                
-                joblib.dump(model, f"calibrate_model_target_{tar}.jlb", compress=True)
-
-    with open("counts_calibrate.pkl", "wb") as f:
-        pickle.dump(counts, f)
-
-    with open("Y_pred_calibrate.pkl", "wb") as f:
-        pickle.dump(Y_cali[columns], f)
-        
-    return Y_cali
----------------------------------------------------------------
-
-cv = MultilabelGroupStratifiedKFold(n_splits=5, random_state=42, shuffle=True)
-cv = StratifiedKFold(n_splits=5, random_state=42, shuffle=True)
-
-Y_target = Y[["atp-sensitive_potassium_channel_antagonist"]]
-#Y_target = Y[["atp-sensitive_potassium_channel_antagonist", "erbb2_inhibitor"]]
-
-#cv_split = cv.split(X, Y_target, groups)
-cv_split = cv.split(X, Y_target)
-
-for j, (trn_idx, val_idx) in tqdm(enumerate(cv_split)):
-    #print(j)
-    #print(trn_idx, val_idx)
-    print(Y_target.iloc[trn_idx].sum())
-    
-    
----------------------------------------------------------------
-submission =  pd.read_csv(
-    #"../input/lish-moa/sample_submission.csv", dtype=dtype, index_col=index_col
-    f"{DATADIR}/sample_submission.csv", dtype=dtype, index_col=index_col
-)
-submission = submission.replace({0.5: 0.0})
-submission = submission.loc[:, columns]
----------------------------------------------------------------
-
-0. : orig
-0.015277188560202947
-
-0.015262686686222073 : 4l,5l,rsなし
-0.0152504925483896   : Y_pred_5lとY_pred_rsなし
-0.015242685766185475 : Y_pred_rs.pklなし
-0.015215426124359421 : 全部入り
----------------------------------------------------------------
-
-- アンサンブルする予定の notebook
-　- LightGBM
-　　https://www.kaggle.com/anonamename/moa-lgbmclassifier-classifierchain
-　　cv: 0.01680
-　- 5つのMLPとStackedTabNet
-　　https://www.kaggle.com/anonamename/mlp-for-ensemble
-　　moa_MLPs.ipynb
-　　　5l cv:0.01768
-　　　4l cv:0.01765
-　　　3l_v2 cv:0.01597
-　　　2l cv:0.01580
-　　　rs cv:0.01615
-　　tabnetclassifier-fit_StackedTabNet.ipynb 
-　　　StackedTabNet cv: 0.01562
-　- GrowNet
-　　https://www.kaggle.com/anonamename/moa-grownet
-　　cv:0.01592
-
-
----------------------------------------------------------------
-## ラベルの共起数カウント.共起数の順位をもとにorder指定
-#_co_occ = co_occ.copy()
-#_co_occ.loc[:, _co_occ.columns] = 0
-#n = co_occ.shape[0]
-#for i in range(n):
-#    for j in range(i):
-#        if i == j:
-#            continue
-#        _co_occ.iloc[i,j] = co_occ.iloc[i,j]
-#co_occ = _co_occ
----------------------------------------------------------------
-    
-マイナーな特定クラスだけLGBやSVM,XGboostのモデル作成するとかした方がいいのでは？
-
----------------------------------------------------------------
-新たに作ったモデルです
-cv良くない + 時間もないのでアンサンブルに入れない方がよさそうですが一応展開しておきます
-
-- self-stacking-xgboost
-https://www.kaggle.com/anonamename/moaselfstackingxgboost
-cv: 0.01603, auc: 0.7559
-学習は9時間以上かかったのでローカルで実行した結果をDatasetsにuploadしました
-学習コードは
-https://www.kaggle.com/anonamename/moa-self-stacking-xgboost?scriptVersionId=47884299
-予測コードは
-https://www.kaggle.com/anonamename/moa-self-stacking-xgboost-calibrate?scriptVersionId=47996842
-のIn[20],In[21],In[22]です
-※マルチラベルではなくターゲットごとの2クラス分類
-※第1段階の予測値を第2段階の学習の追加特徴量とし、クラス間の関係性を学習させる
-　陽性ラベル(=1)が多いクラスを最初に学習してoof出し(第1段階目)、そのoofを特徴量に追加して残りの陽性ラベル少ないクラス学習
-
-
-- XGBClassifier + ClassifierChain
-https://www.kaggle.com/anonamename/moa-xgbclassifier-classifierchain
-cv: 0.01621, auc: 0.5581
-
-
-- 遺伝的アルゴリズム+ cuml + KNN
-https://www.kaggle.com/anonamename/moa-genetic-algorithm-cuml-knn?scriptVersionId=47985408
-cv: 0.01915
-（np.clip(oof,0.0005,0.999) + ctl行=0 にしたら cv: 0.01866）
-※Y_pred.pkl出し忘れたので再実行中
-
-
-- DummyClassifier + MultiOutputClassifier
-https://www.kaggle.com/anonamename/moa-dummyclassifier-multioutputclassifier
-cv: 0.02105
-※DummyClassifierは特徴量を学習データに使わず、ラベルの確率分布を再現するルールベースのモデル
-　ランダムに出力してもこれくらいの精度になるらしい
-
-
----------------------------------------------------------------
-TabNet-TF はNa(feature_dim)を論文の探索範囲よりもかなり大きくすると良さそうでした
-https://www.kaggle.com/yxohrxn/tabnetclassifier-fit
-とほぼ同じ処理を(自分はstacked tabnetを使ってます)
-stacked_tabnet_params = dict(
-    epsilon=1e-05,
-    feature_columns=None,
-    virtual_batch_size=None,
-    num_layers=2,
-    num_decision_steps=1,
-    norm_type="batch",
-    num_groups=-1,
-    batch_momentum=0.9,
-    relaxation_factor=1.2,
-    sparsity_coefficient=0.0001,
-    feature_dim=2560,  # Na
-    output_dim=128,    # Nd
-)
-batch_size=128（batch_size小さくした方がいいが、8にすると時間かかりすぎるため128にしてる）
-のパラメで
-cv: 0.015609, auc: 0.68547
-
-pytorch版でも同じかわからないですがNaを大きくするの試してみてもいいかも…
+仕事を分担したい（CV を変更した MLP の再実験、チューニング）
 
 ---------------------------------------------------------------
 
-@Kon
-mlp-for-ensemble をパラメータチューニングしました
-vote.fitとvote.predictのinputを更新したら使えます
+20201023時点
+◆来週試したいこと
+・LightGBMのコード修正（マルチラベルのone modelではなくクラスごとに206個モデル作る方法）
+　→
+・notebook, discussion確認して気になったの試す
+    - https://www.kaggle.com/c/lish-moa/discussion/191545 で書いてるようにデータ不均衡の対策をしたい
+　→
+・TGAN(テーブルデータのGAN)で学習データ水増し（noiseが増えるだけで失敗しそうだが）
+　→1epoch3000時間もかかるといわれたためあきらめる
+　　改良版のCTGANもうまくいかないらしいので
+　　https://www.kaggle.com/c/lish-moa/discussion/193358
+・加重平均のモデルブレンディングの重みをネルダーミードで最適化
+　→ネルダーミードした方がoof下がるが、LBは悪くなった
 
-暫定のアンサンブルに採用されてるrs のcv は0.016158→0.015888 に改善
-（モデル変わってLB悪化しないといいが）
+20201028
+・PCAが有効だと言ってるディスカッション探す
+　→
+　→
+　　https://www.kaggle.com/c/lish-moa/discussion/193532
 
-predictの時間に余裕あるなら
-lightgbmよりself-stacking-xgboostを使った方がいいかもです（xgbは時間かかる）
-cvもaucもxgbの方が若干良いので
-oofにfitしてるだけなのかもですが
-moa-lightgbm cv: 0.01608, auc: 0.73209
-moa-self-stacking-xgboost cv: 0.01603, auc: 0.75597
+・LightGBMを1モデルでマルチラベル学習。他のsklearnのモデルでも試せるようにする
 
-* beta_1 を 0.75-0.85 位に設定するとスコアが改善
----------------------------------------------------------------
+・
+自分で試したのだと、
+PCAはsklearn.preprocessingのRobustScalerやStandardScalerと組み合わせでcv 0.00007ぐらい下がってました 
 
-LB上位の方は
-- 何かしらの後処理
-- private test 含めたPCAによるリーク
-でshake upするようなこと言ってますね。。。
-後処理は予測値クリップ以外になんかあるのかなあ
-https://www.kaggle.com/c/lish-moa/discussion/200087
+train setだけでPCAしたらshakeup する可能性あるとディスカッション出てますね
+https://www.kaggle.com/c/lish-moa/discussion/193532
+----------------------------------------------------------------------------
 
----------------------------------------------------------------
-fold averagingで作成した疑似ラベルを追加して各foldを再学習するとリークする！！！
-fold1で作成した疑似ラベルをfold1に追加して再学習はリークなし！！！
-https://www.kaggle.com/c/lish-moa/discussion/192410#1083433
+20201030
+◆今週試したこと
+・LightGBMのコード修正
 
----------------------------------------------------------------
+・3層のMLPでfeature engineering
+　- CV下がったの
+　　- 列の統計値
+　　- PCA+RobustScaler
+　　- c-列の2乗
+　　- c-列の絶対値
+　- 公開notebookでは効果出てるが、自分のCV効果なかったの
+　　- RankGauss
+　　- VarianceThreshold（分散がしきい値以下の特徴削除）
+　　- KMeansで特徴量作成
+　　- cp_type列削除
+　- 効果なし
+　　- g-列の2乗
+　　- g-列の二値化
+　　- g-列の絶対値
+　　- cp_type=ctl_vehicle 行の平均値との差、比率
 
-2クラス分類GBDTで各クラスのチューニングをバチバチに頑張ったらMLPに勝てたのかなあ
+・モデルブレンディングの重みをネルダーミードで最適化
+CV下がるが、LB悪化
+
+・TGANあきらめた
+
+◆現在のスコア
+・LightGBM + feature engineering
+CV 0.01548 / LB  0.01987
+
+・MLPブレンディング + feature engineering
+CV 0.01519 / LB  0.01858
+
+◆疑問（困ってること）
+スコア良いpytorchの公開notebook(https://www.kaggle.com/kushal1506/moa-pytorch-feature-engineering-0-01846)
+のMLPをtensorflowで作り直したがうまくいかない
+
+◆来週試したいこと
+・MLPでスコア上げる
+	- パラメータチューニング
+		- https://www.kaggle.com/fchollet/moa-keras-kerastuner-best-practices/?utm_campaign=piqcy&utm_medium=email&utm_source=Revue+newsletter
+・LightGBM + ClassifierChain
+
+・TabNetの論文確認（https://arxiv.org/pdf/1908.07442.pdf）
+・TabNetでスコア上げる
+	- https://www.kaggle.com/hiramcho/moa-tabnet-with-pca-rank-gauss
+
+・sklernでほかのモデル作成してアンサンブル
+
+・RNN (https://www.kaggle.com/c/lish-moa/discussion/193583)
+
+・異常検知
+	- https://www.kaggle.com/rahulsd91/moa-anomaly-detection
+
+・不均衡対策
+	- バッチ内でラベルのバランス保つように学習
+		- https://devblog.thebase.in/entry/2020/02/29/110000
+	- MLSMOTE
+		- https://www.kaggle.com/anonamename/upsampling-multilabel-data-with-mlsmote/edit
+
+・同種の薬のレコード見つける
+	- 統制群に対する値や散布図かく？
+	
+・マルチラベルコンペの上位解法参考にする
+	-https://www.kaggle.com/c/lish-moa/discussion/180092
+
+----------------------------------------------------------------------------
+
+20201106
+◆今週試した上手くいったこと
+* feature engineering
+　g-,c-毎に5%,95%の値でクリップしたらCV 0.000001改善
+
+* nonscored target もクラスに追加した MLP
+　resnet構造のMLPでCV改善
+
+* adabelief-tf=0.1.0
+　CV改善。Lookaheadと組み合わせたらCV悪化（大堀さんが言った通り）
+
+◆今週試した上手くいかなかったこと
+* nonscored target もクラスに追加した MLP + scored targetのclass_weight大きくして学習
+　CV、LB 悪化
+
+* LightGBM + MultiOutputClassifier 
+　LightGBM206個作る方法よりCV、LB 悪化
+　
+* LightGBM + ClassifierChain
+　LightGBM206個作る方法よりCV、LB 悪化
+　LightGBM + MultiOutputClassifier よりはCV改善
+
+* nonscored target もクラスに追加した LightGBM + ClassifierChain 
+　LightGBM206個作る方法よりCV悪化
+　LightGBM + ClassifierChain よりはCV改善
+
+* tf版TabNet
+　MLPよりCV悪化
+
+◆来週試したいこと
+* drug_id利用したMultilabelStratifiedKFoldでモデル再作成
+* feature engineering
+　同じ用量時間だがg-,c-列の値が全然違うデータ削除など
+　https://www.kaggle.com/c/lish-moa/discussion/195245
+* tf版TabNetのパラメチューニング
+* 作成したモデルブレンディング
+
+◆現状の CV/LB スコア
+* tf版TabNet
+　CV: 0.01667 / LB: 出してない
+* MLPとLightGBM は前回から改善なし
+
+◆注目の notebook, discussion
+* https://www.kaggle.com/c/lish-moa/discussion/195378
+　余裕あればCNN試したい
+
+◆疑問（と困ってること）
+* クラス毎に blendingはどうやっている？
+　scipy.optimize.minimizeでやると時間かかりすぎて困ってる
+* tf版TabNetのCV上がらない
+* LB上がらない
+
+◆議題
+* drug_id利用したMultilabelStratifiedKFold 使うか？
+　https://www.kaggle.com/c/lish-moa/discussion/195195
+　CVとLBの差は狭まるがLB 悪化
+　わずかにCV 下げた(0.00002下げた)場合ではLB 改善しなかったので、このCVを完全に信じるのは危なそう
+
+----------------------------------------------------------------------------
+
+20201113
+◆今週試した上手くいったこと
+- MultilabelGroupStratifiedKFold でMLPClassifier.fit 再試
+　activation, bn, dropout の順序
+　→cv変更前と同様bn-act-dropの順序がcv一番良い
+
+　gaussian noise, cutout, mixup, cutmix
+　→cv変更前と同様mixup, cutmixがcv良い
+
+　weight normalization の有無
+　→cv変更前と同様有る方がcv良い
+
+　cp_type と cp_dose の有無
+　→cv変更前と同様無い方がcv良い
+
+　ClippedFeatures, QuantileTransformer 等の前処理
+　→cv変更前と同様
+　　Clipped 有る方が良い
+　　QuantileTransformer 無い方が良い。https://www.kaggle.com/c/lish-moa/discussion/195788 で書いてるようにパラメータ n_quantiles=100, 1000 試したがどちらも効果なし
+
+　PCA features, RowStatistics 等の特徴エンジニアリング
+　→cv変更前と同様
+　　PCA 無い方が良い
+　　RowStatistics 有る方が良い
+　→5シードアベレージで一番cv下がったのは、特徴量の遺伝子発現列の絶対値が2以上かのフラグ列を追加した特長量エンジニアリングを組み合わせたもの(cv: 0.01549)
+　https://www.kaggle.com/anonamename/mlpclassifier-edit-fe-fit
+
+　ctl_vehicle 行の削除
+　→vanilla の状態に ctl_vehicle 行の削除 のみ実行すると効くが、mixupやcutmixと組み合わせると無い方がcv良くなる
+
+　non score target で転移学習
+　→深いMLPやresnetだと効くみたい( https://www.kaggle.com/c/lish-moa/discussion/195932 )だが効果なし
+
+◆今週試した上手くいかなかったこと
+- パラメータチューニングが終わらない
+
+◆来週試したいこと
+- パラメータチューニング
+- 作成したモデルブレンディング
+
+◆注目の notebook, discussion
+- MLP + ClassifierChain みたいな方法のGrowNet
+　https://www.kaggle.com/c/lish-moa/discussion/196436
+- drug_idを特徴量に使う
+　https://www.kaggle.com/c/lish-moa/discussion/195380
+
+----------------------------------------------------------------------------
+
+20201120
+◆今週試した上手くいったこと
+- RapidsのSVM
+　cv: 0.01513 / LB: 出してない (StratifiedKFold。1クラスごとに1つモデル作る方法なので)
+　https://www.kaggle.com/anonamename/moa-rapids-svm
+
+◆今週試した上手くいかなかったこと
+- 在原さんのVotingClassifier.fit, VotingClassifier.predict にLightGBMとMLPを追加してアンサンブル
+　cv下がるがLB悪化
+　cv: 0.01521 / LB: 0.02074 (MultilabelGroupStratifiedKFold)
+　https://www.kaggle.com/anonamename/votingclassifier-fit
+　https://www.kaggle.com/anonamename/votingclassifier-predict
+
+- validation 分割修正してnonscored targets 連結したMLP再試
+　変わらずcv悪化。自分の修正間違ってる？orパラメータの問題？
+　連結前 cv score: 0.01768
+　連結後 cv score: 0.01803
+
+◆来週試したいこと
+- GrowNet
+- マルチラベルでLightGBM学習
+　https://www.kaggle.com/c/lish-moa/discussion/197650
+
+◆疑問（と困ってること）
+- 最終サブどうするか？
+- cvどうするか?
+- アンサンブルするinput揃えるか?
+- 出力ファイルが20GB超えてkaggleカーネルがエラーになる。回避する方法はないか？
 
 
+離散した特徴量だとGBM強い
+連続値の特徴量だとNNに向いてる。今回はこれだからうまくいくみたい(by 大堀さん)
 
-svm と lightgbm の validation strategy や前処理、予測時の処理について最終チェックをお願いできますか？
+GBMは、データが個別の選択肢を持つ人々の行動に関するものである場合に最適に機能します
+https://twitter.com/JFPuget/status/1233431595455041537
 
-svm と lightgbm チェックしました。vote.fit, vote.predict との不整合無かったです
-
-以前指摘された1e-15 の記述が残っていたので、Fork of moa_RAPIDS_SVM_seed23 を再実行してますが、
-モデルのパラメータなどは一切変更してのでモデルの精度が変わることはないです
-（モデルファイルに関係ないとこだから再実行しなくてよかったのに…無駄なことした）
-
-
-結構差があるといえるのかな？
-fold4はloss下がりやすいなあと思ってた
-
-cv: 0.015609 →0.015597
-
----------------------------------------------------------------
-
-https://twitter.com/Shun___PI/status/1333570901162348546?s=20
-
->主催者はデータを分ける際にTrain,Public,Private全てで206クラスに必ずpositiveが1件は含まれるようした
-ここまで気付けるのすごい
-
-ラベルの分布の歪みが大きいPublic ではlabel smoothing の値大きく、
-歪み減少したPrivate ではlabel smoothing の値小さくしたら良かったんですかね
 
 ---------------------------------------------------------------
 
@@ -388,7 +374,7 @@ https://www.kaggle.com/tmhrkt/grownet-gradient-boosting-neural-networks
 
 マイナークラスは oof 予測があてにならない（訓練データにないときある）からアンサンブルの重み求めるときに過学習しそう
 薬品の違いを区別（あるいは解消）できるような特徴を追加しないとダメみたい
-(by 大堀さん)
+(by OHさん)
 
 moaの日本語解説
 https://www.kaggle.com/takiyu/japanese-moa
@@ -396,5 +382,5 @@ https://www.kaggle.com/takiyu/japanese-moa
 PCAについて議論されてる
 https://www.kaggle.com/c/lish-moa/discussion/198898
 
-少量データ対策の手法で聞いたことまとめておくこと（by 岩田さん 20201117）
+少量データ対策の手法で聞いたことまとめておくこと（by Iさん 20201117）
 
