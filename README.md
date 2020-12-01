@@ -42,7 +42,7 @@
     - https://www.kaggle.com/takiyu/japanese-moa
 
 -------------------------------------
-## 最終submitはチームでのアンサンブル（35位）
+## 最終submitはチームのアンサンブル（35位）
 - MultilabelStratifiedGroupKFold cvとLB高くかつアンサンブルするモデルが多いのと少ないのの2つを選択した
     - private LB: 0.01608 : https://www.kaggle.com/yxohrxn/votingclassifier-predict-without-postprocessing?scriptVersionId=48221736
     - private LB: 0.01611 : https://www.kaggle.com/yxohrxn/votingclassifier-predict?scriptVersionId=48129549
@@ -89,7 +89,7 @@
 - ※DummyClassifierは特徴量を学習データに使わず、ラベルの確率分布を再現するルールベースのモデル。ランダムに出力してもこれくらいの精度になるらしい
 - https://www.kaggle.com/anonamename/moa-dummyclassifier-multioutputclassifier
 
-### MLP(層の数変えた5種類のMLPのアンサンブル)
+### MLP(層の数変えた5種類)
 - cv: 0.01718, LB: 0.01861
 - 学習コード: https://www.kaggle.com/anonamename/moa-dnn-feature-engineering-20201023-re-cv
 - 予測コード: https://www.kaggle.com/anonamename/submission-moa-dnn-moa-code-20201104-v2?scriptVersionId=46198226
