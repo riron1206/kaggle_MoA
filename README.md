@@ -45,6 +45,10 @@
 
 -------------------------------------
 ## 最終submitはチームでのアンサンブル
+- 最終サブ: https://www.kaggle.com/yxohrxn/votingclassifier-predict-without-postprocessing?scriptVersionId=48221736
+    - LB高くかつアンサンブルするモデルが多いのと少ないのの2つを選択した
+    - private LB: 0.01608, 35位
+    - 一番性能良かったのは別の方が作ったpretrain tabnet-pytorch
 - https://www.kaggle.com/yxohrxn/votingclassifier-fit
 - https://www.kaggle.com/yxohrxn/votingclassifier-predict
 
