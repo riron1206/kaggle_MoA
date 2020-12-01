@@ -126,6 +126,10 @@
     - https://www.kaggle.com/c/lish-moa/discussion/200533
     - https://twitter.com/nejumi_dqx/status/1333563354468601856
 
+- 14位の解法
+    - スタッキングモデルを含め、これら6つのモデルすべてをブレンド
+    - https://www.kaggle.com/c/lish-moa/discussion/200585
+
 - コンペ中ずっと1位だった猫の解法
     - 我々と同じようにモデルブレンディング。選んだサブミットが悪かったみたいだが一番良いスコアでも銀圏
     - https://www.kaggle.com/c/lish-moa/discussion/200338
