@@ -133,9 +133,9 @@
     - https://www.kaggle.com/c/lish-moa/discussion/200585
 
 - 27位の解法
-    - 26個のMLPのアンサンブル（TabNetなし）
+    - 3種のMLPのアンサンブル（TabNetなし）
     - オリジナルの特徴量+1段目モデルの予測値を2段目モデルの入力にしてスタッキングしてる。スタッキングでprivate LB 0.00001 下がってる
-    - 26個のMLPの単純平均のアンサンブルだけでprivate LB 0.00002 も下がってる
+    - MLPの単純平均のアンサンブルだけでprivate LB 0.00002 も下がってる
     - https://www.kaggle.com/c/lish-moa/discussion/200630
 
 - コンペ中ずっと1位だった猫の解法(private LBは560位)
