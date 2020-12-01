@@ -43,7 +43,7 @@
 
 -------------------------------------
 ## 最終submitはチームでのアンサンブル（35位）
-- cvとLB高くかつアンサンブルするモデルが多いのと少ないのの2つを選択した
+- MultilabelStratifiedGroupKFold cvとLB高くかつアンサンブルするモデルが多いのと少ないのの2つを選択した
     - private LB: 0.01608 : https://www.kaggle.com/yxohrxn/votingclassifier-predict-without-postprocessing?scriptVersionId=48221736
     - private LB: 0.01611 : https://www.kaggle.com/yxohrxn/votingclassifier-predict?scriptVersionId=48129549
     - 一番性能良かったのは別の方が作ったpretrain tabnet-pytorch
