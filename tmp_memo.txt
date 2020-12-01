@@ -311,6 +311,16 @@ cv: 0.015609 →0.015597
 
 ---------------------------------------------------------------
 
+https://twitter.com/Shun___PI/status/1333570901162348546?s=20
+
+>主催者はデータを分ける際にTrain,Public,Private全てで206クラスに必ずpositiveが1件は含まれるようした
+ここまで気付けるのすごい
+
+ラベルの分布の歪みが大きいPublic ではlabel smoothing の値大きく、
+歪み減少したPrivate ではlabel smoothing の値小さくしたら良かったんですかね
+
+---------------------------------------------------------------
+
 MLP + ClassifierChain みたいな方法のGrowNetっていうのあるんですね
 https://www.kaggle.com/c/lish-moa/discussion/196436
 
