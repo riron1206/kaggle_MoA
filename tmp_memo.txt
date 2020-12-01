@@ -1,3 +1,13 @@
+-------------------------------------
+
+### git 更新は以下のコマンドで出来た
+```bash
+$ git add --all
+$ git commit -m "hogehoge"
+$ git push origin HEAD:master
+```
+-------------------------------------
+
 @syokoi gaussian noise, cutout, mixup, cutmix の実験はスキップしてください
 新しい validation strategy で cutmix を実験したところ、resnet、tabnet ともに cv score が改善しました
 

@@ -35,22 +35,18 @@
 
 - 評価指標は各クラスのlog_lossの平均値
 
-
-- コンペ概要日本語訳: https://www.kaggle.com/furuhatakazuki/japanese-moa-introduction
-
--------------------------------------
-## 作業ログ
-- https://github.com/riron1206/kaggle_MoA/issues/2
-- https://trello.com/b/lHvX528J/kagglemoa
+- コンペ概要日本語訳: 
+    - https://www.kaggle.com/furuhatakazuki/japanese-moa-introduction
+    - https://www.kaggle.com/takiyu/japanese-moa
 
 -------------------------------------
-## 最終submitはチームでのアンサンブル
+## 最終submitはチームでのアンサンブル（35位）
 - 最終サブ: https://www.kaggle.com/yxohrxn/votingclassifier-predict-without-postprocessing?scriptVersionId=48221736
     - LB高くかつアンサンブルするモデルが多いのと少ないのの2つを選択した
-    - private LB: 0.01608, 35位
+    - private LB: 0.01608
     - 一番性能良かったのは別の方が作ったpretrain tabnet-pytorch
-- https://www.kaggle.com/yxohrxn/votingclassifier-fit
-- https://www.kaggle.com/yxohrxn/votingclassifier-predict
+    - 採用された自分のモデルは StackedTabNet, MLP-rs。private LB 低い方のサブでは moa-lightgbm, SVM も採用された
+- アンサンブル重み計算: https://www.kaggle.com/yxohrxn/votingclassifier-fit
 
 -------------------------------------
 ## 自分が作ったモデル
@@ -116,12 +112,10 @@
 - ※1,2層程度の浅いMLPを弱モデルとしてブースティング。浅いMLPを1epoch学習→最終層の出力を特徴量列に追加→浅いMLPを1epoch学習→… を繰り返す
 - https://www.kaggle.com/anonamename/moa-grownet
 
-
 -------------------------------------
+## 作業ログ
+- https://github.com/riron1206/kaggle_MoA/issues/2
+- https://trello.com/b/lHvX528J/kagglemoa
 
-### git 更新は以下のコマンドで出来た
-```bash
-$ git add --all
-$ git commit -m "hogehoge"
-$ git push origin HEAD:master
-```
+
+
