@@ -1,5 +1,5 @@
 # KaggleのMoAコンペの感想と試したモデル
-MoAコンペに大堀(Kon), 太田(hirune924), 西(ynishi), 在原(ari hiro), 横井(anonamename)でチームを組んで参加しました。自分が試したモデルを紹介します。
+MoAコンペに大堀(Kon), 太田(hirune924), 西(ynishi), 在原(ari hiro), 横井(anonamename)でチームを組んで参加しました。コンペの感想と自分が試したモデルを紹介します。
 
 ## MoAコンペ概要
 - 2020年9月3日〜2020年11月30日に渡って開催（https://www.kaggle.com/c/lish-moa ）
@@ -9,7 +9,7 @@ MoAコンペに大堀(Kon), 太田(hirune924), 西(ynishi), 在原(ari hiro), �
 	- MoAの薬剤名がクラス名。11-beta-hsd1 inhibitor や antimalarial など
 - ラベルは非常に不均衡。0のラベルが大半で1のラベルが非常に少ない
 - 特徴量はテーブルデータ。値は連続値でカテゴリ型は2列だけ
-- サンプル数に対して特徴量の列数が多いため過学習しやすい
+- サンプル数に対して特徴量の次元数が多いため過学習しやすい
   - train setのサンプル：23,814行
   - 特徴量：875列
 - 評価指標は各クラスのlog_lossの平均値
@@ -32,7 +32,7 @@ MoAコンペに大堀(Kon), 太田(hirune924), 西(ynishi), 在原(ari hiro), �
 - cutmixによるデータ増強
 - 複数モデルのアンサンブル
 - AdaBeliefのオプティマイザー
-    - Adamより高精度になりやすかった
+    - Adamよりは若干高精度になりやすかった
     - github： https://github.com/juntang-zhuang/Adabelief-Optimizer
 
 ## 試したモデル
@@ -88,7 +88,7 @@ SVM, LightGBM, XGBoostはマルチラベルに対応していないため処理�
 ### クラスごとに2クラス分類のSVMを作成
 SVMを206個作って各クラス分類するやり方。
 [MoAのnotebook](https://www.kaggle.com/anonamename/moa-rapids-svm-seed01 ) のIn[13]がサンプルコード。
-[RAPIDS](https://rapids.ai/)のSVMを使うことでGPUでモデル作成でき、高速化している。
+[RAPIDS](https://rapids.ai/)のSVMを使うことでGPUでモデル作成できて高速化している。
 
 ### クラスごとに2クラス分類のLightGBMを作成
 SVMと同じようにLightGBMを206個作って各クラス分類するやり方。
