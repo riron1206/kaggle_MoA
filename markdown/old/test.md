@@ -1,3 +1,5 @@
+Kaggle Python 
+
 # KaggleのMoAコンペの感想と試したモデル
 MoAコンペに大堀(Kon), 太田(hirune924), 西(ynishi), 在原(ari hiro), 横井(anonamename)でチームを組んで参加しました。自分が試したモデルを紹介します。
 
@@ -36,7 +38,7 @@ TabNetはニューラルネットでGBDTを模倣するモデル。
 論文ではテーブルデータの回帰と分類問題でLightGBMやXGBoostなどのGBDTよりも高い精度を出している。
 https://arxiv.org/abs/1908.07442
 
-TabNetのアーキテクチャ(https://ichi.pro/pytorch-de-no-tabnet-no-jisso-277727554318969 より)
+TabNetのアーキテクチャ
 ![tabnet](https://miro.medium.com/max/724/1*twB1nZHPN5Cuxu2h_jpEPg.png)
 
 [MoAのnotebook](https://www.kaggle.com/gogo827jz/moa-stacked-tabnet-baseline-tensorflow-2-0 ) が参考にしたtensorflow版TabNetのサンプルコード。
@@ -45,8 +47,9 @@ MoAの上位ソリューションのほとんどがTabNetを使っており、�
 
 ## MLP(Multilayer perceptron)
 [MoAのnotebook](https://www.kaggle.com/yxohrxn/resnetclassifier-fit ) のIn[5]がtensorflow版のサンプルコード。
-我々のチームでは以下のResNetのようなskip connectionを入れたMLPが高精度だった。
-![resnet](model_seed_0_fold_0_small.png)
+ResNetのようなskip connectionを入れたMLP。
+我々のチームではskip connectionを入れたMLPが高精度だった。
+
 
 ## GrowNet
 1,2層程度の浅いMLPを弱モデルとしてブースティングするモデル。
@@ -65,29 +68,54 @@ SVM, LightGBM, XGBoostはマルチラベルに対応していないため処理�
 精度も良くなく学習に時間がかかるためMoAに適したモデルではなかった。
 
 ### クラスごとに2クラス分類のSVMを作成
-SVMを206個作って各クラス分類するやり方。
+SVMを206個作って各クラス分類する泥臭いやり方。
 [MoAのnotebook](https://www.kaggle.com/anonamename/moa-rapids-svm-seed01 ) のIn[13]がサンプルコード。
 [RAPIDS](https://rapids.ai/)のSVMを使うことでGPUでモデル作成でき、高速化している。
 
 ### クラスごとに2クラス分類のLightGBMを作成
-SVMと同じようにLightGBMを206個作って各クラス分類するやり方。
+SVMと同じようにLightGBMを206個作って各クラス分類する泥臭いやり方。
 [MoAのnotebook](https://www.kaggle.com/anonamename/moa-lightgbm ) のIn[12]がサンプルコード。
 
-### LGBMClassifier + [ClassifierChain](https://scikit-learn.org/stable/modules/generated/sklearn.multioutput.ClassifierChain.html)
-LGBMClassifierをsklearnのClassifierChainでラップしてマルチラベルモデルに変換する方法。
-ClassifierChainはクラス間の相関関係を学習するために分類機を順番に作成し、1つ前のクラスの予測値を特徴量に追加して次のクラスを学習することを繰り返す。
+### LGBMClassifier + ClassifierChain
+LGBMClassifierをsklearnのClassifierChainでラップしてマルチラベルモデルに変換する方法です。
+ClassifierChainはクラス間の相関関係を学習するために分類機を順番に作成し、1つ前のクラスの予測値を特徴量に追加して次のクラスを学習することを繰り返します。
+
+![ClassifierChain](https://miro.medium.com/max/653/1*ycwr_uE8_5lnOMNCnFOuXQ.png)
+
+ClassifierChainは引数のorderで学習するクラスの順番を指定できます。
+early_stoppingは使えません。
 [MoAのnotebook](https://www.kaggle.com/anonamename/moa-lgbmclassifier-classifierchain ) のIn[11]がサンプルコード。
-sklearnにはMultiOutputClassifierなど他にもマルチラベルに変換するクラスがあるが、MoAではClassifierChainの方が若干精度良かった。
+sklearnにはMultiOutputClassifierなど他にもマルチラベルに変換するクラスがありますが、MoAではClassifierChainの方が若干精度良かったです。
 
 ### XGBoost + Self-Stacking
-クラスごとに2クラス分類のXGBoostを作成する方法で、
-第1段階目のモデルの予測値を第2段階のモデルの追加特徴量として、クラス間の相関関係を学習させるSelf-Stackingを行う。
-[MoAのnotebook](https://www.kaggle.com/anonamename/moa-self-stacking-xgboost) がサンプルコード。
-ラベルが1のサンプルを多く含む75クラスを1段階目に学習してOut of Foldの予測値を特徴量に追加する。
-その後、第1段階目で学習しなかった131クラスを学習する。
-ややこしいですが、XGBClassifier + ClassifierChain で作ったモデルよりも精度良かった。
+クラスごとに2クラス分類のXGBoostを作成する泥臭い方法ですが、
+第1段階目のモデルの予測値を第2段階のモデルの追加特徴量として、クラス間の相関関係を学習させるSelf-Stackingを行います。
+
+![Self-Stacking](Self-Stacking.png)
+
+[MoAのnotebook](https://www.kaggle.com/anonamename/moa-self-stacking-xgboost) が実装です。
+ラベルが1のサンプルを多く含む75クラスを1段階目に学習してOut of Foldの予測値を特徴量に追加します。
+その後、第1段階目で学習しなかった131クラスを学習します。
+ややこしいですが、XGBClassifier + ClassifierChain で作ったモデルよりも精度良かったです。
 （全クラス実行すると9時間以上かかるためkaggle notebookではエラーになりますが…）
 
 
 ## いろんなモデル試した感想
-- MoAのような連続値のテーブルデータでマルチラベル分類を行う場合はTabNetやMLPが高精度になりそう
+- MoAのような連続値のテーブルデータでマルチラベル分類を行う場合はTabNetとMLPが高精度になりそう
+
+
+# 参考文献
+- [TabNet: Attentive Interpretable Tabular Learning](https://arxiv.org/abs/1908.07442)
+- [PyTorchでのTabNetの実装](https://ichi.pro/pytorch-de-no-tabnet-no-jisso-277727554318969)
+- [MoA LSTM / Pure Transformer [fast and NOT bad]](https://www.kaggle.com/gogo827jz/moa-lstm-pure-transformer-fast-and-not-bad)
+- [Kernel Logistic Regression [One for 206 Targets]](https://www.kaggle.com/gogo827jz/kernel-logistic-regression-one-for-206-targets )
+- [DeepInsight EfficientNet-B3 NoisyStudent](https://www.kaggle.com/markpeng/deepinsight-efficientnet-b3-noisystudent )
+- [Deep dive into multi-label classification..! (With detailed Case Study)](https://towardsdatascience.com/journey-to-the-center-of-multi-label-classification-384c40229bff)
+- [sklearn.multioutput.ClassifierChain](https://scikit-learn.org/stable/modules/generated/sklearn.multioutput.ClassifierChain.html)
+
+
+
+## 免責事項
+
+著者は本記事を掲載するにあたって、その内容、機能等について細心の注意を払っておりますが、内容が正確であるかどうか、安全なものであるか等について保証をするものではなく、何らの責任を負うものではありません。
+本記事内容のご利用により、万一、ご利用者様に何らかの不都合や損害が発生したとしても、著者や著者の所属組織（日鉄ソリューションズ株式会社）は何らの責任を負うものではありません。
