@@ -9,6 +9,9 @@ MoAコンペに大堀(Kon), 太田(hirune924), 西(ynishi), 在原(ari hiro), �
 	- MoAの薬剤名がクラス名。11-beta-hsd1 inhibitor や antimalarial など
 - ラベルは非常に不均衡。0のラベルが大半で1のラベルが非常に少ない
 - 特徴量はテーブルデータ。値は連続値でカテゴリ型は2列だけ
+- サンプル数に対して特徴量の列数が多いため過学習しやすい
+  - train setのサンプル：23,814行
+  - 特徴量：875列
 - 評価指標は各クラスのlog_lossの平均値
 - validation setとtest setが完全には相関しない。このため最終順位は大きく入れ替わった(shake up/down)
 
@@ -20,9 +23,17 @@ MoAコンペに大堀(Kon), 太田(hirune924), 西(ynishi), 在原(ari hiro), �
 ![pipeline](https://www.googleapis.com/download/storage/v1/b/kaggle-forum-message-attachments/o/inbox%2F2350982%2Fbc8d816ce80c4b07e2cab451d1c30085%2Fmoa.png?generation=1606888296177049&alt=media)
 
 ## MoAコンペの感想
-- validation setとtest setが完全には相関しないので、validation setを信じていいのかコンペ中不安だった
-- 本格的にkaggleのコンペに参加しするのは初めてで難しかったがとても楽しめた
+- validation setとtest setが完全には相関しないため、validation setを信じていいのかコンペ中不安だった
+- 本格的にkaggleのコンペに参加するのは初めてで難しかったがとても楽しめた
 
+## 特に有効だった手法
+- TabNet
+- label smoothing
+- cutmixによるデータ増強
+- 複数モデルのアンサンブル
+- AdaBeliefのオプティマイザー
+    - Adamより高精度になりやすかった
+    - github： https://github.com/juntang-zhuang/Adabelief-Optimizer
 
 ## 試したモデル
 特徴量エンジニアリングがあまり効かず、いろんなモデルを試した。
@@ -36,17 +47,24 @@ TabNetはニューラルネットでGBDTを模倣するモデル。
 論文ではテーブルデータの回帰と分類問題でLightGBMやXGBoostなどのGBDTよりも高い精度を出している。
 https://arxiv.org/abs/1908.07442
 
-TabNetのアーキテクチャ(https://ichi.pro/pytorch-de-no-tabnet-no-jisso-277727554318969 より)
-![tabnet](https://miro.medium.com/max/724/1*twB1nZHPN5Cuxu2h_jpEPg.png)
+TabNetのアーキテクチャ
+![tabnet](https://github.com/titu1994/tf-TabNet/blob/master/images/TabNet.png?raw=true)
 
-[MoAのnotebook](https://www.kaggle.com/gogo827jz/moa-stacked-tabnet-baseline-tensorflow-2-0 ) が参考にしたtensorflow版TabNetのサンプルコード。
+[MoAのnotebook](https://www.kaggle.com/gogo827jz/moa-stacked-tabnet-baseline-tensorflow-2-0 ) が参考にしたtensorflow版TabNetのサンプルコード。マルチラベル分類できるように元のgithubのコードを変更している。
+- tensorflow版TabNetのgithub: https://github.com/titu1994/tf-TabNet
+
+pytorch版TabNetの方がkaggle notebookでは人気だった。[サンプルコードの1例](https://www.kaggle.com/hiramcho/moa-tabnet-with-pca-rank-gauss)。
+- pytorch版TabNetのgithub: https://github.com/dreamquark-ai/tabnet
+
 MoAの上位ソリューションのほとんどがTabNetを使っており、我々のチームでもTabNetが最も高精度なモデルだった。
 
 
 ## MLP(Multilayer perceptron)
 [MoAのnotebook](https://www.kaggle.com/yxohrxn/resnetclassifier-fit ) のIn[5]がtensorflow版のサンプルコード。
 我々のチームでは以下のResNetのようなskip connectionを入れたMLPが高精度だった。
-![resnet](model_seed_0_fold_0_small.png)
+Weight normalizationも精度向上に寄与した。
+![model_seed_0_fold_0_small_v2.png](model_seed_0_fold_0_small_v2.png )
+
 
 ## GrowNet
 1,2層程度の浅いMLPを弱モデルとしてブースティングするモデル。
@@ -54,9 +72,12 @@ MoAの上位ソリューションのほとんどがTabNetを使っており、�
 https://arxiv.org/abs/2002.07971
 
 GrowNetのアーキテクチャ
-![grownet](https://camo.githubusercontent.com/21d8ce57fbc8deb694696a139f7a94c83ee66f604b5ab4a757ffe6ed04dfb2f7/68747470733a2f2f6d656469612e61727869762d76616e6974792e636f6d2f72656e6465722d6f75747075742f333238393030302f78312e706e67)
+![grownet](https://raw.githubusercontent.com/sbadirli/GrowNet/master/Model.png )
 
-[MoAのnotebook](https://www.kaggle.com/anonamename/moa-grownet ) がpytorch版のサンプルコード。
+[MoAのnotebook](https://www.kaggle.com/anonamename/moa-grownet ) がpytorch版のサンプルコード。tensorflow版は見当たらなかった。
+
+- pytorch版GrowNetのgithub: https://github.com/sbadirli/GrowNet
+
 MLPよりもやや精度悪く、最終提出した最適なアンサンブルの組み合わせには採用しなかった。
 
 
@@ -85,8 +106,8 @@ sklearnにはMultiOutputClassifierなど他にもマルチラベルに変換す�
 [MoAのnotebook](https://www.kaggle.com/anonamename/moa-self-stacking-xgboost) がサンプルコード。
 ラベルが1のサンプルを多く含む75クラスを1段階目に学習してOut of Foldの予測値を特徴量に追加する。
 その後、第1段階目で学習しなかった131クラスを学習する。
-ややこしいですが、XGBClassifier + ClassifierChain で作ったモデルよりも精度良かった。
-（全クラス実行すると9時間以上かかるためkaggle notebookではエラーになりますが…）
+ややこしい方法だが XGBClassifier + ClassifierChain で作ったモデルよりも精度良かった。
+（全クラスで実行すると9時間以上かかるためkaggle notebookではエラーになります…）
 
 
 ## いろんなモデル試した感想
