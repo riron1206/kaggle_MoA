@@ -1,5 +1,7 @@
 https://qiita.com/hirune924/items/82fccd08865f7467339d
 
+https://qiita.com/anonamename/private/911174ac71cb4367f208
+
 -------------------------------------
 
 ### git 更新は以下のコマンドで出来た
