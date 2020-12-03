@@ -127,23 +127,29 @@
     - https://www.kaggle.com/c/lish-moa/discussion/200736
 
 - 3位の解法
-    - データ増強してる。no_ctl_samples + ctl_sample1 - ctl_sample2 のレコードも加える。ctl_sample1, ctl_sample2 はコントロール行のデータからランダムに2件選ぶ
+    - **データ増強してる。no_ctl_samples + ctl_sample1 - ctl_sample2 のレコードも加える。ctl_sample1, ctl_sample2 はコントロール行のデータからランダムに2件選ぶ**
     - https://www.kaggle.com/c/lish-moa/discussion/200540
 
 - 4位の解法
-    - 4つモデルの予測値をCNNでスタッキングする方法をしていた。これはほかのコンペで使えそう
+    - **4つモデルの予測値をCNNでスタッキングする方法をしていた。これはほかのコンペで使えそう**
     - https://www.kaggle.com/c/lish-moa/discussion/200808
 
 - 5位の解法
     - 既知の薬にはMultilabelStratifiedKFold, 未知の薬にはMultilabelStratifiedGroupKFold を使う
-    - L2 Softmax-> コサイン類似度で既知未知を分類したらしいがよくわからん
+    - **L2 Softmax-> コサイン類似度で既知未知を分類したらしいがよくわからん**
     - https://www.kaggle.com/c/lish-moa/discussion/200533
     - https://twitter.com/nejumi_dqx/status/1333563354468601856
 
 - 7位の解法
-    - Early Stoppingを各クラス単位で行うことしてた。普通は全クラスの平均で打ち切るところを
+    - **Early Stoppingを各クラス単位で行うことしてた**。普通は全クラスの平均で打ち切るところを
     - private test set含めたPCAしてる。つまり、submit時に学習+推論両方している。CVは悪化するが、Private LBは良くなってる
     - https://www.kaggle.com/c/lish-moa/discussion/200808
+
+- 8位の解法
+    - **マルチラベルをマルチクラスに変換。一意なラベルの組み合わせが328通りしかないので**
+    - **マルチクラスは単独モデルとしては精度悪いがアンサンブルで非常に強力。他のモデルとは相関低いので**
+    - https://www.kaggle.com/c/lish-moa/discussion/200992
+
 - 14位の解法
     - スタッキングモデルを含め、TabNetなどの6つのモデルすべてをブレンド
     - テストセット用のnon scored targetsを作成するモデルを作成している（よくわからん）
@@ -160,6 +166,11 @@
     - 後処理として、[1e-5; 1-1e-5]のクリッピング
     - lr = 1e-5とSGDオプティマイザーでPseudo Labelling効いたみたい（学習率下げたら効いたのかな？）
     - https://www.kaggle.com/c/lish-moa/discussion/200679
+
+- 36位の解法
+    - 3 head MLP
+    - **LayerNormalization がめちゃめちゃ効くらしい**
+    - https://www.kaggle.com/c/lish-moa/discussion/201051
 
 - コンペ中ずっと1位だった猫の解法(private LBは560位)
     - oofでモデルブレンディングの重み最適化してる。最適化後、MultilabelStratifiedKFoldで1から学習してる（我々のチームのようにscipyで最適化すれば1回ですむのに）
@@ -197,3 +208,9 @@ GBATCHSIZE = 64
 n_independent= 1
 n_shared = 0 
 ```
+
+### コンペ後にtrain set/public test set/private test set のラベルの分布に違い証明してるディスカッション
+- public test set の分布は他のsetより明らかにいびつ
+- train setとprivate test set の分布は同じ
+- このためcvとpublic LBで完全な相関がなく、cvを信じたチームはshake upした
+- https://www.kaggle.com/c/lish-moa/discussion/200832
