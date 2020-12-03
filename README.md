@@ -64,7 +64,7 @@
 ### XGBClassifier + ClassifierChain
 - cv: 0.01621, auc: 0.5581
 - https://www.kaggle.com/anonamename/moa-xgbclassifier-classifierchain
-    
+  
 ### Self-Stacking + 2クラス分類のXGBoost
 - cv: 0.01603, auc: 0.7559
 - ※第1段階の予測値を第2段階の学習の追加特徴量とし、クラス間の関係性を学習させる。陽性ラベル(=1)が多いクラスを最初に学習してoof出し(第1段階目)、そのoofを特徴量に追加して残りの陽性ラベル少ないクラス学習
@@ -79,7 +79,7 @@
 - https://www.kaggle.com/anonamename/moa-rapids-svm-seed01
 - https://www.kaggle.com/anonamename/fork-of-moa-rapids-svm-seed23
 - https://www.kaggle.com/anonamename/fork-of-moa-rapids-svm-seed4
-    
+  
 ### 遺伝的アルゴリズム + cuml + KNN
 - cv: 0.01909（np.clip(oof,0.0005,0.999) + ctl行=0 にしたら cv: 0.01865）
 - ※特徴量をスケーリングする重みを遺伝的アルゴリズムで計算し、cumlのKNNでマルチラベル分類する
@@ -122,12 +122,28 @@
 
 -------------------------------------
 ## 上位解法
+- 1位の解法
+    - DeepInsight CNNのアンサンブルが決め手でLB伸した
+    - https://www.kaggle.com/c/lish-moa/discussion/200736
+
+- 3位の解法
+    - データ増強してる。no_ctl_samples + ctl_sample1 - ctl_sample2 のレコードも加える。ctl_sample1, ctl_sample2 はコントロール行のデータからランダムに2件選ぶ
+    - https://www.kaggle.com/c/lish-moa/discussion/200540
+
+- 4位の解法
+    - 4つモデルの予測値をCNNでスタッキングする方法をしていた。これはほかのコンペで使えそう
+    - https://www.kaggle.com/c/lish-moa/discussion/200808
+
 - 5位の解法
     - 既知の薬にはMultilabelStratifiedKFold, 未知の薬にはMultilabelStratifiedGroupKFold を使う
     - L2 Softmax-> コサイン類似度で既知未知を分類したらしいがよくわからん
     - https://www.kaggle.com/c/lish-moa/discussion/200533
     - https://twitter.com/nejumi_dqx/status/1333563354468601856
 
+- 7位の解法
+    - Early Stoppingを各クラス単位で行うことしてた。普通は全クラスの平均で打ち切るところを
+    - private test set含めたPCAしてる。つまり、submit時に学習+推論両方している。CVは悪化するが、Private LBは良くなってる
+    - https://www.kaggle.com/c/lish-moa/discussion/200808
 - 14位の解法
     - スタッキングモデルを含め、TabNetなどの6つのモデルすべてをブレンド
     - テストセット用のnon scored targetsを作成するモデルを作成している（よくわからん）
@@ -163,7 +179,7 @@
 ### マイナークラスの行を増やして学習すればLB 0.0003 - 0.0004改善するらしい
 - ポジティブサンプルが10個未満のクラスの行を4倍にする
 - https://www.kaggle.com/c/lish-moa/discussion/200600
-    
+  
 ### TabNetだけでpublic LB = 0.01833だしたらしいパラメ
 - https://www.kaggle.com/c/lish-moa/discussion/200649
 ```
