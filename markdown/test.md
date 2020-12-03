@@ -1,5 +1,9 @@
-# KaggleのMoAコンペの感想と試したモデル
+# KaggleのMoAコンペで試したモデルの感想
 MoAコンペに大堀(Kon), 太田(hirune924), 西(ynishi), 在原(ari hiro), 横井(anonamename)でチームを組んで参加しました。コンペの感想と自分が試したモデルを紹介します。
+
+チームメンバーもMoAコンペについての投稿をしてるので是非ご確認ください！！！
+
+- テーブルデータに使えるNNモデルの備忘録（PyTorch）: https://qiita.com/hirune924/items/82fccd08865f7467339d
 
 ## MoAコンペ概要
 - 2020年9月3日〜2020年11月30日に渡って開催（https://www.kaggle.com/c/lish-moa ）
