@@ -126,7 +126,7 @@
     - DeepInsight CNNのアンサンブルが決め手でLB伸した
     - [ScipyのSLSQP](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html) 使ってブレンド重み決めてるのは我々と同じ。Optuna 使ってもブレンド重み探索したらしい
 - https://www.kaggle.com/c/lish-moa/discussion/200736
-    
+  
 - 3位の解法
     - **データ増強してる。no_ctl_samples + ctl_sample1 - ctl_sample2 のレコードも加える。ctl_sample1, ctl_sample2 はコントロール行のデータからランダムに2件選ぶ**
     - https://www.kaggle.com/c/lish-moa/discussion/200540
@@ -215,3 +215,8 @@ n_shared = 0
 - train setとprivate test set の分布は同じ
 - このためcvとpublic LBで完全な相関がなく、cvを信じたチームはshake upした
 - https://www.kaggle.com/c/lish-moa/discussion/200832
+
+
+### ラベルスムージングは学習データとテストデータのラベルの分布が違う場合に効く
+- ラベルスムージングありで学習するとpublic testのスコア上げるが、private testのスコア下がる（trainはprivate testと似ており、public testとは異なる）
+- https://www.kaggle.com/c/lish-moa/discussion/201729
