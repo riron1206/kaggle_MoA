@@ -124,8 +124,9 @@
 ## 上位解法
 - 1位の解法
     - DeepInsight CNNのアンサンブルが決め手でLB伸した
-    - https://www.kaggle.com/c/lish-moa/discussion/200736
-
+    - [ScipyのSLSQP](https://docs.scipy.org/doc/scipy/reference/optimize.minimize-slsqp.html) 使ってブレンド重み決めてるのは我々と同じ。Optuna 使ってもブレンド重み探索したらしい
+- https://www.kaggle.com/c/lish-moa/discussion/200736
+    
 - 3位の解法
     - **データ増強してる。no_ctl_samples + ctl_sample1 - ctl_sample2 のレコードも加える。ctl_sample1, ctl_sample2 はコントロール行のデータからランダムに2件選ぶ**
     - https://www.kaggle.com/c/lish-moa/discussion/200540
