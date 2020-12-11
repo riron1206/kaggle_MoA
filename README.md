@@ -119,6 +119,9 @@
 ## 作業ログ
 - https://github.com/riron1206/kaggle_MoA/issues/2
 - https://trello.com/b/lHvX528J/kagglemoa
+-------------------------------------
+## Qiitaに投げた記事
+- https://qiita.com/anonamename/items/911174ac71cb4367f208
 
 -------------------------------------
 ## 上位解法
@@ -129,7 +132,7 @@
 - 2位の解法
     - **最初に全結合層を1つ入れることで入力フィーチャをそれ自体で意味のある順序に並べ替える（誤差逆伝播により意味のある並び替えになる）→1D-CNNのモデルを使ってる。この正しい並べ替え+1D-CNNを使うモデルはLB:0.001601でこのコンペで一番高精度なモデルになってる**
     - cp_time、cp_doseは除いた
-- https://www.kaggle.com/c/lish-moa/discussion/202256
+    - https://www.kaggle.com/c/lish-moa/discussion/202256
 - 3位の解法
     - **データ増強してる。no_ctl_samples + ctl_sample1 - ctl_sample2 のレコードも加える。ctl_sample1, ctl_sample2 はコントロール行のデータからランダムに2件選ぶ**
     - https://www.kaggle.com/c/lish-moa/discussion/200540
