@@ -1,4 +1,4 @@
-# MoAコンペのコード
+# kaggle MoAコンペのコード
 - https://www.kaggle.com/c/lish-moa
 
 ## コンペ概要
